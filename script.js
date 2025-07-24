@@ -312,10 +312,38 @@ class ChatApp {
                     }
                 } else {
                     // 開啟引用來源：使用搜尋模式的主文和引用
-                    finalResponse = searchResponse.value;
+                    finalResponse = JSON.parse(JSON.stringify(searchResponse.value)); // 深拷貝避免修改原始數據
+                    
+                    // 特別處理 searchResponse 中的重複內容問題
+                    if (finalResponse.candidates?.[0]?.content?.parts) {
+                        const parts = finalResponse.candidates[0].content.parts;
+                        const nonThoughtParts = parts.filter(part => part.thought !== true && !part.text?.includes('<thinking>'));
+                        
+                        if (nonThoughtParts.length > 1) {
+                            if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+                                console.log(`⚠️ 直接API SearchResponse 發現 ${nonThoughtParts.length} 個非思考內容 parts，進行去重處理`);
+                                nonThoughtParts.forEach((part, index) => {
+                                    console.log(`NonThought Part ${index} 長度:`, part.text?.length);
+                                });
+                            }
+                            
+                            // 選擇最長的非思考內容作為主要回答（通常最完整）
+                            const longestPart = nonThoughtParts.reduce((longest, current) => 
+                                (current.text?.length || 0) > (longest.text?.length || 0) ? current : longest
+                            );
+                            
+                            // 重構 parts，保留思考內容和最長的回答內容
+                            const thoughtParts = parts.filter(part => part.thought === true || part.text?.includes('<thinking>'));
+                            finalResponse.candidates[0].content.parts = [...thoughtParts, longestPart];
+                            
+                            if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+                                console.log('✅ 選擇最長的回答內容，長度:', longestPart.text?.length);
+                            }
+                        }
+                    }
                     
                     if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
-                        console.log('✅ 開啟引用來源：使用搜尋模式主文和引用');
+                        console.log('✅ 開啟引用來源：使用搜尋模式主文和引用（已去重）');
                     }
                 }
                 
@@ -362,8 +390,27 @@ class ChatApp {
                 
             } else if (searchResponse.status === 'fulfilled') {
                 // 只有搜尋請求成功
-                finalResponse = searchResponse.value;
-                console.warn('推理請求失敗，僅使用搜尋結果');
+                finalResponse = JSON.parse(JSON.stringify(searchResponse.value));
+                
+                // 即使只有搜尋結果，也要處理重複內容問題
+                if (finalResponse.candidates?.[0]?.content?.parts) {
+                    const parts = finalResponse.candidates[0].content.parts;
+                    const nonThoughtParts = parts.filter(part => part.thought !== true && !part.text?.includes('<thinking>'));
+                    
+                    if (nonThoughtParts.length > 1) {
+                        if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+                            console.log(`⚠️ 僅搜尋結果：發現 ${nonThoughtParts.length} 個非思考內容 parts，進行去重處理`);
+                        }
+                        
+                        const longestPart = nonThoughtParts.reduce((longest, current) => 
+                            (current.text?.length || 0) > (longest.text?.length || 0) ? current : longest
+                        );
+                        const thoughtParts = parts.filter(part => part.thought === true || part.text?.includes('<thinking>'));
+                        finalResponse.candidates[0].content.parts = [...thoughtParts, longestPart];
+                    }
+                }
+                
+                console.warn('推理請求失敗，僅使用搜尋結果（已去重）');
             } else if (reasoningResponse.status === 'fulfilled') {
                 // 只有推理請求成功
                 finalResponse = reasoningResponse.value;
@@ -388,6 +435,18 @@ class ChatApp {
             console.log('=== 處理 Worker 雙重回應 ===');
             console.log('SearchResponse 狀態:', searchResponse ? 'exists' : 'missing');
             console.log('ReasoningResponse 狀態:', reasoningResponse ? 'exists' : 'missing');
+            
+            if (searchResponse?.candidates?.[0]?.content?.parts) {
+                console.log('SearchResponse parts 數量:', searchResponse.candidates[0].content.parts.length);
+                searchResponse.candidates[0].content.parts.forEach((part, index) => {
+                    console.log(`SearchResponse Part ${index}:`, {
+                        isThought: part.thought === true,
+                        hasThinkingTag: part.text?.includes('<thinking>'),
+                        length: part.text?.length || 0,
+                        preview: part.text?.substring(0, 100) + '...'
+                    });
+                });
+            }
         }
 
         // 處理請求結果 - 根據引用來源設定決定主文來源
@@ -397,7 +456,7 @@ class ChatApp {
             // 兩個請求都成功
             if (!this.showReferencesCheckbox.checked) {
                 // 關閉引用來源：使用推理模式的主文 + 搜尋模式的引用資料結構（但不顯示）
-                finalResponse = reasoningResponse;
+                finalResponse = JSON.parse(JSON.stringify(reasoningResponse)); // 深拷貝避免修改原始數據
                 
                 // 將搜尋模式的 grounding metadata 附加到推理回應上（雖然不會顯示，但保持結構完整）
                 if (searchResponse.candidates?.[0]?.groundingMetadata && finalResponse.candidates?.[0]) {
@@ -408,11 +467,39 @@ class ChatApp {
                     console.log('✅ Worker模式 - 關閉引用來源：使用推理模式主文 + 搜尋模式引用結構');
                 }
             } else {
-                // 開啟引用來源：使用搜尋模式的主文和引用
-                finalResponse = searchResponse;
+                // 開啟引用來源：使用搜尋模式的主文和引用，但需要處理重複內容問題
+                finalResponse = JSON.parse(JSON.stringify(searchResponse)); // 深拷貝避免修改原始數據
+                
+                // 特別處理 searchResponse 中的重複內容問題
+                if (finalResponse.candidates?.[0]?.content?.parts) {
+                    const parts = finalResponse.candidates[0].content.parts;
+                    const nonThoughtParts = parts.filter(part => part.thought !== true && !part.text?.includes('<thinking>'));
+                    
+                    if (nonThoughtParts.length > 1) {
+                        if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+                            console.log(`⚠️ Worker SearchResponse 發現 ${nonThoughtParts.length} 個非思考內容 parts，進行去重處理`);
+                            nonThoughtParts.forEach((part, index) => {
+                                console.log(`NonThought Part ${index} 長度:`, part.text?.length);
+                            });
+                        }
+                        
+                        // 選擇最長的非思考內容作為主要回答（通常最完整）
+                        const longestPart = nonThoughtParts.reduce((longest, current) => 
+                            (current.text?.length || 0) > (longest.text?.length || 0) ? current : longest
+                        );
+                        
+                        // 重構 parts，保留思考內容和最長的回答內容
+                        const thoughtParts = parts.filter(part => part.thought === true || part.text?.includes('<thinking>'));
+                        finalResponse.candidates[0].content.parts = [...thoughtParts, longestPart];
+                        
+                        if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+                            console.log('✅ 選擇最長的回答內容，長度:', longestPart.text?.length);
+                        }
+                    }
+                }
                 
                 if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
-                    console.log('✅ Worker模式 - 開啟引用來源：使用搜尋模式主文和引用');
+                    console.log('✅ Worker模式 - 開啟引用來源：使用搜尋模式主文和引用（已去重）');
                 }
             }
             
@@ -423,7 +510,7 @@ class ChatApp {
             // 提取搜尋回應的思考內容
             if (searchResponse.candidates?.[0]?.content?.parts) {
                 searchResponse.candidates[0].content.parts.forEach(part => {
-                    if (part.text && part.text.includes('<thinking>')) {
+                    if (part.thought === true || part.text?.includes('<thinking>')) {
                         searchThinkingText += part.text + '\n';
                     }
                 });
@@ -432,7 +519,7 @@ class ChatApp {
             // 提取推理回應的思考內容
             if (reasoningResponse.candidates?.[0]?.content?.parts) {
                 reasoningResponse.candidates[0].content.parts.forEach(part => {
-                    if (part.text && part.text.includes('<thinking>')) {
+                    if (part.thought === true || part.text?.includes('<thinking>')) {
                         reasoningThinkingText += part.text + '\n';
                     }
                 });
@@ -459,7 +546,22 @@ class ChatApp {
             
         } else if (searchResponse) {
             // 只有搜尋請求成功
-            finalResponse = searchResponse;
+            finalResponse = JSON.parse(JSON.stringify(searchResponse));
+            
+            // 即使只有搜尋結果，也要處理重複內容問題
+            if (finalResponse.candidates?.[0]?.content?.parts) {
+                const parts = finalResponse.candidates[0].content.parts;
+                const nonThoughtParts = parts.filter(part => part.thought !== true && !part.text?.includes('<thinking>'));
+                
+                if (nonThoughtParts.length > 1) {
+                    const longestPart = nonThoughtParts.reduce((longest, current) => 
+                        (current.text?.length || 0) > (longest.text?.length || 0) ? current : longest
+                    );
+                    const thoughtParts = parts.filter(part => part.thought === true || part.text?.includes('<thinking>'));
+                    finalResponse.candidates[0].content.parts = [...thoughtParts, longestPart];
+                }
+            }
+            
             console.warn('Worker模式 - 推理請求失敗，僅使用搜尋結果');
         } else if (reasoningResponse) {
             // 只有推理請求成功
