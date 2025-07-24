@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 問答系統 - Gemini</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-robot"></i> AI 問答系統</h1>
+        </header>
+
+        <div class="main-content">
+            <!-- Main Chat Area -->
+            <div class="main-chat-container">
+                <!-- Chat Container - Maximized -->
+                <div class="chat-container" id="chatContainer">
+                    <div class="welcome-message">
+                        <i class="fas fa-comments"></i>
+                        <h3>歡迎使用 AI 問答系統</h3>
+                        <p>請輸入您的問題，我會為您提供詳細的回答、思考流程和相關資源</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Input Area -->
+            <div class="floating-input-area">
+                <!-- Compact Quick Questions -->
+                <div class="quick-questions-compact">
+                    <div class="question-buttons">
+                        <button class="question-btn-compact" data-question="如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？">
+                            <i class="fas fa-gavel"></i> 車輛竊取
+                        </button>
+                        <button class="question-btn-compact" data-question="鄰居的狗經常在夜間吠叫影響睡眠，我可以採取什麼法律行動？">
+                            <i class="fas fa-home"></i> 噪音干擾
+                        </button>
+                        <button class="question-btn-compact" data-question="我在網路上購買商品但收到假貨，賣家拒絕退款怎麼辦？">
+                            <i class="fas fa-shopping-cart"></i> 消費糾紛
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Floating Input Container -->
+                <div class="floating-input-container">
+                    <div class="input-section">
+                        <div class="input-container">
+                            <textarea id="questionInput" placeholder="請輸入您的問題..." rows="1" maxlength="50000"></textarea>
+                            <button id="sendButton" class="send-btn" disabled>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="character-count">
+                            <span id="charCount">0</span> / 50,000 字元
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Right Settings -->
+            <div class="bottom-right-settings" id="bottomRightSettings">
+                <button id="settingsToggle" class="settings-toggle-btn">
+                    <i class="fas fa-cog"></i>
+                </button>
+                
+                <div class="settings-panel" id="settingsPanel">
+                    <!-- 設定選項 -->
+                    <div class="options-section">
+                        <h3><i class="fas fa-sliders-h"></i> 選項</h3>
+                        <div class="options-grid">
+                            <label class="option-item">
+                                <input type="checkbox" id="showThinking" checked>
+                                <span class="checkmark"></span>
+                                <span class="option-text">
+                                    <i class="fas fa-brain"></i> 思考流程
+                                </span>
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" id="showReferences" checked>
+                                <span class="checkmark"></span>
+                                <span class="option-text">
+                                    <i class="fas fa-link"></i> 引用來源
+                                </span>
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" id="showDebug">
+                                <span class="checkmark"></span>
+                                <span class="option-text">
+                                    <i class="fas fa-bug"></i> 調試模式
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Worker 狀態顯示 -->
+                    <div class="worker-status-section">
+                        <h3><i class="fas fa-server"></i> 服務狀態</h3>
+                        <div class="status-info">
+                            <i class="fas fa-check-circle" style="color: #2ecc71;"></i>
+                            <span>由 Cloudflare Workers 提供服務</span>
+                        </div>
+                        <small class="status-note">
+                            <i class="fas fa-shield-alt"></i> API 密鑰安全地存儲在後端服務中
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 載入中的覆蓋層 -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>AI 正在思考中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script_worker.js"></script>
+</body>
+</html>

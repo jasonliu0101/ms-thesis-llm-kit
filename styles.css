@@ -1,0 +1,1265 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+.container {
+    width: 100vw;
+    height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header Styles */
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.header h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Main Content - Full viewport layout */
+.main-content {
+    background: white;
+    border-radius: 20px;
+    padding: 0;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Main Chat Container */
+.main-chat-container {
+    flex: 1;
+    padding: 25px;
+    overflow-y: auto;
+    margin-bottom: 120px; /* 留出浮動輸入區的空間 */
+}
+
+.chat-container {
+    height: 100%;
+    border: 2px solid rgba(102, 126, 234, 0.1);
+    border-radius: 15px;
+    padding: 25px;
+    overflow-y: auto;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.05);
+}
+
+.api-key-container label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+.input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 15px 50px 15px 15px;
+    border: 2px solid #e1e5e9;
+    border-radius: 12px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.toggle-btn {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 6px;
+    transition: color 0.3s ease;
+}
+
+.toggle-btn:hover {
+    color: #667eea;
+}
+
+.api-note {
+    color: #666;
+    font-size: 0.85rem;
+    margin-top: 8px;
+    display: block;
+}
+
+/* Options Section */
+.options-section {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.settings-panel .options-section {
+    margin-bottom: 0;
+}
+
+.options-section h3 {
+    color: #555;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 15px;
+    border: 2px solid #f0f0f0;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.option-item:hover {
+    border-color: #667eea;
+    background-color: #f8f9ff;
+}
+
+.option-item input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    margin-right: 12px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.option-item input[type="checkbox"]:checked + .checkmark {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.option-item input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    color: white;
+    font-size: 16px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.option-text {
+    font-weight: 500;
+    color: #555;
+}
+
+.option-text i {
+    margin-right: 8px;
+    color: #667eea;
+}
+
+/* Disabled options styling */
+.option-item input[type="checkbox"]:disabled + .checkmark {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.option-item input[type="checkbox"]:disabled ~ .option-text {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.option-item:has(input[type="checkbox"]:disabled) {
+    cursor: not-allowed;
+}
+
+/* Chat Section - New Layout */
+.main-chat-area .chat-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+}
+
+/* Chat Container - Updated */
+.main-chat-area .chat-container {
+    flex: 1;
+    border: 2px solid rgba(102, 126, 234, 0.1);
+    border-radius: 15px;
+    padding: 25px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.05);
+    min-height: 300px;
+    max-height: calc(100vh - 500px);
+}
+
+/* Quick Questions - Moved Below Chat */
+.main-chat-area .quick-questions {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+    border-radius: 12px;
+    border: 2px solid rgba(102, 126, 234, 0.1);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.05);
+}
+
+.main-chat-area .quick-questions h4 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.main-chat-area .quick-questions h4 i {
+    color: #667eea;
+}
+
+.main-chat-area .question-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.main-chat-area .question-btn {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 10px;
+    padding: 12px 15px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.85rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.05);
+}
+
+.main-chat-area .question-btn:hover {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e6ecff 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.main-chat-area .question-btn i {
+    color: #667eea;
+    font-size: 1rem;
+    width: 16px;
+    text-align: center;
+}
+
+.welcome-message {
+    text-align: center;
+    padding: 50px 20px;
+    color: #666;
+}
+
+.welcome-message i {
+    font-size: 3.5rem;
+    color: #667eea;
+    margin-bottom: 25px;
+    opacity: 0.8;
+}
+
+.welcome-message h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.welcome-message p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+/* Message Styles */
+.message {
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 12px;
+    max-width: 85%;
+    position: relative;
+}
+
+.user-message {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+}
+
+.ai-message {
+    background: white;
+    border: 2px solid #f0f0f0;
+    margin-right: auto;
+    border-bottom-left-radius: 4px;
+}
+
+.message-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.message-header i {
+    margin-right: 8px;
+}
+
+.message-content {
+    line-height: 1.6;
+}
+
+.thinking-process {
+    background: linear-gradient(135deg, #f0f4ff 0%, #f8f9ff 100%);
+    border: 1px solid rgba(102, 126, 234, 0.15);
+    border-radius: 10px;
+    padding: 12px 15px;
+    margin: 0 0 15px 0;
+    order: -1;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.05);
+}
+
+.thinking-process h4 {
+    color: #667eea;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.thinking-process h4 i {
+    margin-right: 6px;
+    font-size: 0.8rem;
+}
+
+.thinking-content {
+    background: rgba(102, 126, 234, 0.03);
+    border-left: 3px solid #667eea;
+    padding: 10px 12px;
+    margin: 0;
+    border-radius: 0 6px 6px 0;
+    font-style: italic;
+    color: #666;
+    line-height: 1.5;
+    font-size: 0.8rem;
+}
+
+.thinking-content p {
+    margin-bottom: 8px;
+}
+
+.thinking-content strong {
+    color: #667eea;
+    font-weight: 600;
+}
+
+.references {
+    background: #f8f9ff;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    padding: 12px;
+    margin: 12px 0;
+}
+
+.references h4 {
+    color: #667eea;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.references h4 i {
+    margin-right: 6px;
+    font-size: 0.8rem;
+}
+
+.reference-item {
+    display: inline-block;
+    margin: 4px 6px 4px 0;
+    padding: 6px 10px;
+    background: white;
+    border-radius: 16px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
+    max-width: 200px;
+    vertical-align: top;
+}
+
+.reference-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    border-color: #667eea;
+}
+
+.reference-item.highlight {
+    background: #e6ecff;
+    border-color: #667eea;
+    animation: highlightPulse 2s ease-in-out;
+}
+
+.reference-number {
+    display: inline-block;
+    background: #667eea;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 2px 5px;
+    border-radius: 8px;
+    margin-right: 6px;
+    min-width: 16px;
+    text-align: center;
+    line-height: 1;
+}
+
+.reference-link {
+    color: #333;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+    display: inline-block;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reference-link:hover {
+    color: #667eea;
+}
+
+.reference-text {
+    color: #555;
+    font-weight: 500;
+    display: inline-block;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reference-snippet {
+    display: none; /* 隱藏片段以保持簡潔 */
+}
+
+/* 字元計數樣式 */
+.character-count {
+    text-align: right;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #888;
+    padding-right: 5px;
+}
+
+.character-count span {
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+/* 引用連結樣式 */
+.citation-link {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 0.75em;
+    margin: 0 1px;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: rgba(102, 126, 234, 0.1);
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+.citation-link:hover {
+    background: rgba(102, 126, 234, 0.2);
+    transform: scale(1.1);
+    text-decoration: underline;
+}
+
+/* 上標樣式 */
+sup {
+    vertical-align: super;
+    font-size: 0.8em;
+    line-height: 0;
+}
+
+/* 參考資料區塊樣式優化 */
+.footnotes {
+    margin-top: 20px;
+    padding: 20px;
+    background: linear-gradient(145deg, #f8f9ff, #e8f2ff);
+    border-radius: 12px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.footnotes h4 {
+    color: #667eea;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+    padding-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footnote-item {
+    margin-bottom: 12px;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.footnote-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.footnote-item.highlight {
+    background: #fff5d6;
+    border-left-color: #ffb347;
+    animation: highlightPulse 2s ease-in-out;
+}
+
+@keyframes highlightPulse {
+    0%, 100% { background: #fff5d6; }
+    50% { background: #ffe4b3; }
+}
+
+.footnote-number {
+    color: #667eea;
+    font-weight: bold;
+    font-size: 0.9rem;
+    min-width: 25px;
+    text-align: center;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 50%;
+    padding: 4px;
+    margin-right: 5px;
+}
+
+.footnote-item a {
+    color: #333;
+    text-decoration: none;
+    flex: 1;
+    line-height: 1.4;
+    transition: color 0.2s ease;
+}
+
+.footnote-item a:hover {
+    color: #667eea;
+    text-decoration: underline;
+}
+
+/* 搜尋查詢區塊樣式優化 */
+.search-queries {
+    margin-top: 20px;
+    padding: 15px;
+    background: linear-gradient(145deg, #f0f8ff, #e6f3ff);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 123, 255, 0.2);
+}
+
+.search-queries h4 {
+    color: #0066cc;
+    font-size: 1rem;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-query {
+    display: inline-block;
+    background: #007bff;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin: 3px;
+    font-weight: 500;
+}
+
+/* 載入中動畫 */
+/* 響應式設計 - Updated for Floating Settings */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .main-content {
+        border-radius: 15px;
+    }
+    
+    .main-chat-container {
+        padding: 15px;
+        margin-bottom: 140px;
+    }
+    
+    .floating-input-area {
+        width: calc(100% - 20px);
+        bottom: 10px;
+    }
+    
+    .floating-input-container {
+        padding: 15px;
+        border-radius: 15px;
+    }
+    
+    .question-buttons {
+        gap: 6px;
+    }
+    
+    .question-btn-compact {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .bottom-right-settings {
+        bottom: 10px;
+        right: 10px;
+    }
+    
+    .settings-panel {
+        width: 280px;
+        bottom: 65px;
+        right: -10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 5px;
+    }
+    
+    .header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .main-chat-container {
+        padding: 10px;
+    }
+    
+    .floating-input-container {
+        padding: 12px;
+    }
+    
+    .question-btn-compact {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    
+    .settings-panel {
+        width: 250px;
+        right: -15px;
+    }
+    
+    .input-container {
+        padding: 10px 12px;
+    }
+    
+    .send-btn {
+        width: 35px;
+        height: 35px;
+    }
+}
+
+/* Welcome Message */
+.welcome-message {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.welcome-message i {
+    font-size: 3rem;
+    color: #667eea;
+    margin-bottom: 20px;
+}
+
+.welcome-message h3 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.welcome-message p {
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.loading-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.loading-content {
+    text-align: center;
+    color: white;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 輸入區域樣式 - New Sidebar Layout */
+.main-chat-area .input-section {
+    margin-top: 0;
+    background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.05);
+}
+
+.main-chat-area .input-container {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.main-chat-area .input-container textarea {
+    flex: 1;
+    padding: 18px;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 15px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    max-height: 200px;
+    transition: all 0.3s ease;
+    line-height: 1.5;
+    background: white;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.05);
+}
+
+.main-chat-area .input-container textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1), 0 4px 15px rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
+}
+
+.main-chat-area .input-container textarea::placeholder {
+    color: #aaa;
+}
+
+.main-chat-area .send-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 15px;
+    padding: 18px 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 120px;
+    white-space: nowrap;
+    font-weight: 500;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.main-chat-area .send-btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.main-chat-area .send-btn:disabled {
+    background: linear-gradient(135deg, #ccc 0%, #bbb 100%);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.main-chat-area .send-btn i {
+    font-size: 1rem;
+}
+
+/* 字元計數樣式 - Sidebar Layout */
+.main-chat-area .character-count {
+    text-align: right;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.question-btn-compact i {
+    color: #667eea;
+    font-size: 0.9rem;
+}
+
+/* Input Section - Fixed Bottom */
+.fixed-bottom-area .input-section {
+    margin: 0;
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+}
+
+.fixed-bottom-area .input-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.fixed-bottom-area .input-container textarea {
+    flex: 1;
+    padding: 12px 15px;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 25px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: none;
+    height: 45px;
+    min-height: 45px;
+    max-height: 45px;
+    transition: all 0.3s ease;
+    line-height: 1.4;
+    background: white;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.05);
+    overflow-y: hidden;
+}
+
+
+
+/* Floating Input Area - Similar to the attached image */
+.floating-input-area {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 40px);
+    max-width: 800px;
+    z-index: 1000;
+}
+
+.floating-input-container {
+    background: rgba(102, 126, 234, 0.15);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.input-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    padding: 12px 16px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.input-container textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #333;
+    font-size: 16px;
+    resize: none;
+    min-height: 24px;
+    max-height: 120px;
+    font-family: inherit;
+}
+
+.input-container textarea::placeholder {
+    color: rgba(102, 126, 234, 0.6);
+}
+
+.send-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    opacity: 1;
+}
+
+.send-btn:hover {
+    background: #5a67d8;
+    transform: scale(1.05);
+}
+
+.send-btn:disabled {
+    background: rgba(102, 126, 234, 0.5);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.character-count {
+    text-align: right;
+    color: rgba(102, 126, 234, 0.7);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+/* Quick Questions - Compact version above input */
+.quick-questions-compact {
+    margin-bottom: 12px;
+}
+
+.question-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.question-btn-compact {
+    background: rgba(255, 255, 255, 0.8);
+    color: #667eea;
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    white-space: nowrap;
+}
+
+.question-btn-compact:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: #667eea;
+    transform: translateY(-2px);
+}
+
+.question-btn-compact i {
+    margin-right: 6px;
+}
+
+/* Bottom Right Settings */
+.bottom-right-settings {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1001;
+}
+
+.settings-toggle-btn {
+    width: 50px;
+    height: 50px;
+    background: rgba(102, 126, 234, 0.2);
+    backdrop-filter: blur(20px);
+    color: #667eea;
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+}
+
+.settings-toggle-btn:hover {
+    background: rgba(102, 126, 234, 0.3);
+    transform: scale(1.1);
+}
+
+.settings-toggle-btn.active {
+    background: #667eea;
+    color: white;
+    transform: rotate(45deg);
+}
+
+.settings-panel {
+    position: absolute;
+    bottom: 60px;
+    right: 0;
+    width: 320px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+
+.settings-panel.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Settings Panel Content */
+.api-section {
+    margin-bottom: 20px;
+}
+
+.api-key-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+    font-size: 14px;
+}
+
+.api-key-container {
+    margin-bottom: 20px;
+}
+
+.api-key-container:last-of-type {
+    margin-bottom: 10px;
+}
+
+.api-note {
+    display: block;
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    border-radius: 8px;
+    font-size: 12px;
+    color: #2e7d32;
+    line-height: 1.4;
+}
+
+.api-note i {
+    color: #4caf50;
+    margin-right: 6px;
+}
+
+.input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.toggle-btn {
+    background: transparent;
+    border: 2px solid #e2e8f0;
+    color: #666;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.toggle-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.api-note {
+    color: #888;
+    font-size: 12px;
+    margin-top: 6px;
+    display: block;
+}
+
+.options-section h3 {
+    color: #555;
+    margin-bottom: 15px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 10px 12px;
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.option-item:hover {
+    border-color: #667eea;
+    background-color: #f8f9ff;
+}
+
+.option-item input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ddd;
+    background-color: white;
+    border-radius: 4px;
+    margin-right: 12px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.option-item input[type="checkbox"]:checked + .checkmark {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.option-item input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    color: white;
+    font-size: 14px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.option-text {
+    font-weight: 500;
+    color: #555;
+    font-size: 14px;
+}
+
+.option-text i {
+    margin-right: 8px;
+    color: #667eea;
+}
+
+/* API Key Container */
+
+/* API Key 動態顯示 */
+.api-key-container.hidden {
+    display: none;
+}
+
+.api-key-container {
+    transition: all 0.3s ease;
+}
