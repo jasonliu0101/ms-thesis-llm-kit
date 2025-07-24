@@ -213,17 +213,15 @@ class ChatApp {
             throw new Error('請先設定 Worker URL');
         }
 
-        // 確保 URL 是絕對路徑且格式正確
-        let finalUrl = this.workerUrl;
-        if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-            finalUrl = 'https://' + finalUrl;
-        }
+        // 強制使用絕對 URL，直接硬編碼以避免任何 URL 解析問題
+        const finalUrl = 'https://ai-qa-backend.jasonliu1563.workers.dev';
         
         // 調試信息
         console.log('=== API 調用詳細信息 ===');
         console.log('原始 workerUrl:', this.workerUrl);
-        console.log('最終 URL:', finalUrl);
+        console.log('強制使用的 URL:', finalUrl);
         console.log('當前頁面 URL:', window.location.href);
+        console.log('URL 類型檢查 - startsWith https:', finalUrl.startsWith('https://'));
 
         const requestBody = {
             question: question,
@@ -235,7 +233,17 @@ class ChatApp {
 
         console.log('請求體:', JSON.stringify(requestBody, null, 2));
 
-        const response = await fetch(finalUrl, {
+        // 使用 URL 構造函數確保絕對 URL
+        let urlObj;
+        try {
+            urlObj = new URL(finalUrl);
+            console.log('URL 對象創建成功:', urlObj.href);
+        } catch (e) {
+            console.error('URL 構造失敗:', e);
+            throw new Error('無效的 Worker URL');
+        }
+
+        const response = await fetch(urlObj.href, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
