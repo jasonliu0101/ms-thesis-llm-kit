@@ -4,6 +4,8 @@
   "description": "AI Q&A System with Gemini - Supports both standalone and distributed deployment",
   "main": "worker.js",
   "scripts": {
+    "build": "echo 'Building static files...' && npm run optimize",
+    "optimize": "echo 'Optimizing for production...'",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "serve": "python3 -m http.server 8000",
