@@ -12,7 +12,7 @@ export default {
     }
 
     try {
-      const { question, options } = await request.json();
+      const { question, enableSearch, showThinking, options } = await request.json();
       
       if (!question) {
         return new Response(JSON.stringify({ error: 'Question is required' }), {
@@ -21,14 +21,21 @@ export default {
         });
       }
 
-      // 檢查是否需要雙重 API 調用
-      if (options?.dualMode) {
-        const response = await handleDualGeminiAPI(question, env, options);
+      console.log('📥 收到請求:', {
+        question: question.substring(0, 100) + '...',
+        enableSearch,
+        showThinking,
+        options
+      });
+
+      // 根據前端參數決定調用策略
+      if (enableSearch !== false) {
+        // 雙重調用：有 grounding 和無 grounding
+        const response = await handleDualGeminiAPI(question, env, { enableSearch, showThinking });
         return createResponse(response);
       } else {
-        // 單一 API 調用
-        const withSearch = options?.withSearch !== false; // 默認啟用搜索
-        const response = await callGeminiAPI(question, env, withSearch);
+        // 單純無 grounding 調用
+        const response = await callGeminiAPI(question, env, false);
         return createResponse(response);
       }
 
@@ -47,65 +54,71 @@ export default {
 
 // 處理雙重 Gemini API 調用
 async function handleDualGeminiAPI(question, env, options) {
+  console.log('🚀 開始雙重 Gemini API 調用');
+  console.log('📝 問題:', question);
+  console.log('⚙️ 選項:', JSON.stringify(options, null, 2));
+
   try {
-    // 同時發送兩個請求：一個有 Google Search，一個沒有
+    // 明確進行兩個不同的調用：
+    // 1. 有 grounding 的搜索調用
+    // 2. 沒有 grounding 的推理調用
+    console.log('📡 發送兩個並行請求...');
+    
     const [searchResponse, reasoningResponse] = await Promise.allSettled([
-      callGeminiAPI(question, env, true),   // 有搜尋：提供主要內容和引用
-      callGeminiAPI(question, env, false)   // 無搜尋：提供推理流程
+      callGeminiAPI(question, env, true),   // 有 grounding
+      callGeminiAPI(question, env, false)   // 無 grounding
     ]);
 
+    console.log('📨 兩個請求完成');
+    console.log('🔍 搜索請求狀態:', searchResponse.status);
+    console.log('🧠 推理請求狀態:', reasoningResponse.status);
+
+    // 準備雙重回應結構
+    const dualResponse = {
+      searchResponse: null,
+      reasoningResponse: null,
+      isDualMode: true
+    };
+
     // 處理搜尋回應
-    let searchResult = null;
     if (searchResponse.status === 'fulfilled') {
-      searchResult = searchResponse.value;
+      dualResponse.searchResponse = searchResponse.value;
+      console.log('✅ 搜索請求成功');
+      if (searchResponse.value.candidates?.[0]?.groundingMetadata) {
+        console.log('  - 含有 groundingMetadata');
+      } else {
+        console.log('  - ⚠️ 搜索請求成功但沒有 groundingMetadata');
+      }
     } else {
-      console.error('Search request failed:', searchResponse.reason);
+      console.error('❌ 搜索請求失敗:', searchResponse.reason);
+      dualResponse.searchError = searchResponse.reason?.message || '搜索請求失敗';
     }
 
     // 處理推理回應
-    let reasoningResult = null;
     if (reasoningResponse.status === 'fulfilled') {
-      reasoningResult = reasoningResponse.value;
+      dualResponse.reasoningResponse = reasoningResponse.value;
+      console.log('✅ 推理請求成功');
+      if (reasoningResponse.value.candidates?.[0]?.groundingMetadata) {
+        console.log('  - ⚠️ 推理請求意外含有 groundingMetadata');
+      } else {
+        console.log('  - 正確：無 groundingMetadata');
+      }
     } else {
-      console.error('Reasoning request failed:', reasoningResponse.reason);
+      console.error('❌ 推理請求失敗:', reasoningResponse.reason);
+      dualResponse.reasoningError = reasoningResponse.reason?.message || '推理請求失敗';
     }
 
-    // 合併結果
-    if (searchResult && reasoningResult) {
-      // 將推理內容添加到搜尋結果中
-      if (searchResult.candidates && searchResult.candidates[0] && 
-          reasoningResult.candidates && reasoningResult.candidates[0]) {
-        
-        const searchCandidate = searchResult.candidates[0];
-        const reasoningCandidate = reasoningResult.candidates[0];
-        
-        // 提取推理流程的思考內容
-        let thinkingContent = '';
-        if (reasoningCandidate.content && reasoningCandidate.content.parts) {
-          reasoningCandidate.content.parts.forEach(part => {
-            if (part.thought === true && part.text) {
-              thinkingContent += part.text + '\n';
-            }
-          });
-        }
-        
-        // 將思考內容添加到搜尋結果中
-        if (thinkingContent) {
-          searchCandidate.enhancedThinkingContent = thinkingContent.trim();
-        }
-      }
-      
-      return searchResult;
-    } else if (searchResult) {
-      return searchResult;
-    } else if (reasoningResult) {
-      return reasoningResult;
-    } else {
+    // 檢查是否至少有一個成功
+    if (!dualResponse.searchResponse && !dualResponse.reasoningResponse) {
+      console.error('💥 兩個請求都失敗');
       throw new Error('Both API calls failed');
     }
 
+    console.log('🎯 回傳雙重回應結構');
+    return dualResponse;
+
   } catch (error) {
-    console.error('Dual API call error:', error);
+    console.error('💥 雙重 API 調用錯誤:', error);
     throw error;
   }
 }
@@ -117,7 +130,9 @@ async function callGeminiAPI(question, env, withSearch = true) {
     throw new Error('GEMINI_API_KEY not configured');
   }
 
-  // 構建請求體
+  console.log(`=== 開始 Gemini API 調用 (withSearch: ${withSearch}) ===`);
+
+  // 構建請求體 - 統一的配置
   const requestBody = {
     contents: [
       {
@@ -129,11 +144,13 @@ async function callGeminiAPI(question, env, withSearch = true) {
       }
     ],
     generationConfig: {
-      temperature: 0.7,
-      topK: 40,
-      topP: 0.95,
-      maxOutputTokens: 8192,
-      stopSequences: []
+      temperature: 0,                    // 確定性回答
+      maxOutputTokens: 65536,           // 最大輸出 token 數
+      responseMimeType: "text/plain",   // 回應格式
+      thinking_config: {
+        thinking_budget: 24576,        // 思考流程 token 預算
+        include_thoughts: true         // 包含思考過程
+      }
     },
     safetySettings: [
       {
@@ -155,43 +172,43 @@ async function callGeminiAPI(question, env, withSearch = true) {
     ]
   };
 
-  // 如果啟用搜索，添加 Google Search 工具
+  // 根據 withSearch 決定是否添加 Google Search 工具和系統指令
   if (withSearch) {
+    // 有 grounding 的請求
     requestBody.tools = [
       {
-        googleSearchRetrieval: {
-          dynamicRetrievalConfig: {
-            mode: "MODE_DYNAMIC",
-            dynamicThreshold: 0.7
-          }
-        }
+        googleSearch: {}
       }
     ];
-  }
-
-  // 如果不啟用搜索，啟用思考模式
-  if (!withSearch) {
+    
     requestBody.systemInstruction = {
       parts: [
         {
-          text: `你是一個專業的法律顧問 AI 助手。請按照以下格式回答用戶的法律問題：
-
-<thinking>
-在這裡進行詳細的思考和分析過程：
-1. 理解問題的核心法律議題
-2. 分析相關的法律條文和原則
-3. 考慮可能的例外情況和複雜因素
-4. 思考實務上的處理方式
-5. 評估不同觀點和可能的結果
-</thinking>
-
-然後提供正式的回答內容...`
+          text: "請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請結合網路搜尋資料提供準確答案，並確實引用相關來源。"
         }
       ]
     };
+    
+    console.log('🔍 配置：啟用 Google Search (有 grounding)');
+  } else {
+    // 沒有 grounding 的請求
+    requestBody.systemInstruction = {
+      parts: [
+        {
+          text: "請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請進行深度分析和邏輯推理，展示您的思考過程、分析步驟和推理邏輯。"
+        }
+      ]
+    };
+    
+    console.log('🧠 配置：純推理模式 (無 grounding)');
   }
 
+  // 記錄完整請求體
+  console.log('📋 請求體:', JSON.stringify(requestBody, null, 2));
+
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  
+  console.log('🌐 請求 URL:', url.replace(apiKey, 'API_KEY_HIDDEN'));
   
   const response = await fetch(url, {
     method: 'POST',
@@ -201,12 +218,42 @@ async function callGeminiAPI(question, env, withSearch = true) {
     body: JSON.stringify(requestBody)
   });
 
+  console.log(`📨 回應狀態: ${response.status} ${response.statusText}`);
+
   if (!response.ok) {
     const errorText = await response.text();
+    console.error('❌ API 錯誤:', errorText);
     throw new Error(`Gemini API error: ${response.status} ${errorText}`);
   }
 
-  return await response.json();
+  const responseData = await response.json();
+  
+  // 記錄完整回應結構
+  console.log('📋 完整回應結構:', JSON.stringify(responseData, null, 2));
+  
+  // 記錄關鍵信息
+  if (responseData.candidates && responseData.candidates[0]) {
+    const candidate = responseData.candidates[0];
+    console.log('✅ 回應摘要:');
+    console.log('  - 有 groundingMetadata:', !!candidate.groundingMetadata);
+    console.log('  - Content parts 數量:', candidate.content?.parts?.length || 0);
+    
+    if (candidate.groundingMetadata) {
+      console.log('  - Search queries:', candidate.groundingMetadata.webSearchQueries?.length || 0);
+      console.log('  - Grounding chunks:', candidate.groundingMetadata.groundingChunks?.length || 0);
+      console.log('  - Grounding supports:', candidate.groundingMetadata.groundingSupports?.length || 0);
+    }
+    
+    if (candidate.content && candidate.content.parts) {
+      candidate.content.parts.forEach((part, index) => {
+        console.log(`  - Part ${index}: length=${part.text?.length || 0}, thought=${part.thought}`);
+      });
+    }
+  }
+
+  console.log(`=== 完成 Gemini API 調用 (withSearch: ${withSearch}) ===`);
+  
+  return responseData;
 }
 
 // 創建回應
