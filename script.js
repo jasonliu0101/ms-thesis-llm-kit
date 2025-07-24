@@ -1,16 +1,50 @@
 class ChatApp {
     constructor() {
-        // 直接使用 Gemini API，不需要 Worker URL
+        // 檢查是否使用 Worker 模式
+        // 可以通過 URL 參數、環境變數或設定來決定
+        this.workerUrl = this.detectWorkerUrl();
+        
+        // 如果沒有 Worker URL，使用直接 API 模式
         this.geminiApiKey = '';
         
         // 調試信息
-        console.log('=== ChatApp 初始化 (直接 API 模式) ===');
+        console.log('=== ChatApp 初始化 ===');
+        console.log('Worker URL:', this.workerUrl || '未設定（使用直接 API 模式）');
         console.log('當前頁面位置:', window.location.href);
         
         this.initializeElements();
         this.bindEvents();
         this.loadSavedSettings();
         this.updateCharacterCount();
+    }
+
+    detectWorkerUrl() {
+        // 檢查 URL 參數
+        const urlParams = new URLSearchParams(window.location.search);
+        const workerParam = urlParams.get('worker');
+        if (workerParam) {
+            console.log('🔧 從 URL 參數檢測到 Worker URL:', workerParam);
+            return workerParam;
+        }
+
+        // 檢查是否在生產環境（例如 Cloudflare Pages）
+        if (window.location.hostname.includes('pages.dev') || 
+            window.location.hostname.includes('workers.dev')) {
+            // 假設 Worker 在同一個域名下的 /api 路徑
+            const workerUrl = window.location.origin + '/api';
+            console.log('🔧 檢測到 Cloudflare 環境，使用 Worker URL:', workerUrl);
+            return workerUrl;
+        }
+
+        // 檢查本地存儲的設定
+        const savedWorkerUrl = localStorage.getItem('workerUrl');
+        if (savedWorkerUrl) {
+            console.log('🔧 從本地存儲檢測到 Worker URL:', savedWorkerUrl);
+            return savedWorkerUrl;
+        }
+
+        // 默認不使用 Worker
+        return null;
     }
 
     initializeElements() {
@@ -205,8 +239,19 @@ class ChatApp {
         try {
             let response;
             
-            // 直接使用本地 Gemini API - 實現雙重調用
-            response = await this.callDualGeminiAPI(question);
+            // 檢查是否使用 Worker 模式（如果有 workerUrl 或環境變數指示）
+            if (this.workerUrl) {
+                // Worker 模式：發送請求到 Worker
+                response = await this.callWorkerAPI(question);
+                
+                // 如果是 Worker 回應的雙重模式，需要特別處理
+                if (response.isDualMode) {
+                    response = this.processWorkerDualResponse(response);
+                }
+            } else {
+                // 直接使用本地 Gemini API - 實現雙重調用
+                response = await this.callDualGeminiAPI(question);
+            }
 
             // 處理並顯示回應
             this.processAndDisplayResponse(response, question);
@@ -333,6 +378,136 @@ class ChatApp {
             // 不啟用搜尋，只調用普通的 API
             return await this.callGeminiAPIWithoutSearch(question);
         }
+    }
+
+    processWorkerDualResponse(workerResponse) {
+        // 從 Worker 回應中提取 searchResponse 和 reasoningResponse
+        const { searchResponse, reasoningResponse } = workerResponse;
+        
+        if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+            console.log('=== 處理 Worker 雙重回應 ===');
+            console.log('SearchResponse 狀態:', searchResponse ? 'exists' : 'missing');
+            console.log('ReasoningResponse 狀態:', reasoningResponse ? 'exists' : 'missing');
+        }
+
+        // 處理請求結果 - 根據引用來源設定決定主文來源
+        let finalResponse = null;
+
+        if (searchResponse && reasoningResponse) {
+            // 兩個請求都成功
+            if (!this.showReferencesCheckbox.checked) {
+                // 關閉引用來源：使用推理模式的主文 + 搜尋模式的引用資料結構（但不顯示）
+                finalResponse = reasoningResponse;
+                
+                // 將搜尋模式的 grounding metadata 附加到推理回應上（雖然不會顯示，但保持結構完整）
+                if (searchResponse.candidates?.[0]?.groundingMetadata && finalResponse.candidates?.[0]) {
+                    finalResponse.candidates[0].groundingMetadata = searchResponse.candidates[0].groundingMetadata;
+                }
+                
+                if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+                    console.log('✅ Worker模式 - 關閉引用來源：使用推理模式主文 + 搜尋模式引用結構');
+                }
+            } else {
+                // 開啟引用來源：使用搜尋模式的主文和引用
+                finalResponse = searchResponse;
+                
+                if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+                    console.log('✅ Worker模式 - 開啟引用來源：使用搜尋模式主文和引用');
+                }
+            }
+            
+            // 提取兩個回應的思考內容進行比較，選擇更好的推理內容
+            let searchThinkingText = '';
+            let reasoningThinkingText = '';
+            
+            // 提取搜尋回應的思考內容
+            if (searchResponse.candidates?.[0]?.content?.parts) {
+                searchResponse.candidates[0].content.parts.forEach(part => {
+                    if (part.text && part.text.includes('<thinking>')) {
+                        searchThinkingText += part.text + '\n';
+                    }
+                });
+            }
+            
+            // 提取推理回應的思考內容
+            if (reasoningResponse.candidates?.[0]?.content?.parts) {
+                reasoningResponse.candidates[0].content.parts.forEach(part => {
+                    if (part.text && part.text.includes('<thinking>')) {
+                        reasoningThinkingText += part.text + '\n';
+                    }
+                });
+            }
+            
+            // 選擇更豐富的思考內容
+            let selectedThinkingContent = '';
+            if (reasoningThinkingText.length > searchThinkingText.length) {
+                selectedThinkingContent = reasoningThinkingText;
+                if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+                    console.log('🧠 Worker模式 - 選擇推理模式的思考內容（更豐富）');
+                }
+            } else if (searchThinkingText.length > 0) {
+                selectedThinkingContent = searchThinkingText;
+                if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+                    console.log('🧠 Worker模式 - 選擇搜尋模式的思考內容');
+                }
+            }
+            
+            // 將選中的思考內容作為 enhancedThinkingContent
+            if (selectedThinkingContent && finalResponse.candidates?.[0]) {
+                finalResponse.candidates[0].enhancedThinkingContent = selectedThinkingContent;
+            }
+            
+        } else if (searchResponse) {
+            // 只有搜尋請求成功
+            finalResponse = searchResponse;
+            console.warn('Worker模式 - 推理請求失敗，僅使用搜尋結果');
+        } else if (reasoningResponse) {
+            // 只有推理請求成功
+            finalResponse = reasoningResponse;
+            console.warn('Worker模式 - 搜尋請求失敗，僅使用推理結果');
+        } else {
+            // 兩個請求都失敗
+            throw new Error('Worker 雙重 API 調用都失敗了');
+        }
+
+        return finalResponse;
+    }
+
+    async callWorkerAPI(question) {
+        const requestBody = {
+            question: question,
+            enableSearch: this.enableSearchCheckbox ? this.enableSearchCheckbox.checked : true,
+            showThinking: this.showThinkingCheckbox ? this.showThinkingCheckbox.checked : false,
+            options: {
+                showDebug: this.showDebugCheckbox ? this.showDebugCheckbox.checked : false
+            }
+        };
+
+        if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+            console.log('🌐 調用 Worker API:', this.workerUrl);
+            console.log('📤 請求內容:', requestBody);
+        }
+
+        const response = await fetch(this.workerUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Worker API 請求失敗 (${response.status}): ${errorText}`);
+        }
+
+        const result = await response.json();
+        
+        if (this.showDebugCheckbox && this.showDebugCheckbox.checked) {
+            console.log('📥 Worker 回應:', result);
+        }
+
+        return result;
     }
 
     async callGeminiAPIWithSearch(question) {
