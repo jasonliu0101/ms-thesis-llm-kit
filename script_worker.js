@@ -12,7 +12,7 @@ class ChatApp {
         this.initializeElements();
         this.bindEvents();
         this.loadSavedSettings();
-        this.updateCharacterCount();
+        this.autoResizeTextarea();
     }
 
     initializeElements() {
@@ -26,7 +26,6 @@ class ChatApp {
         this.questionInput = document.getElementById('questionInput');
         this.sendButton = document.getElementById('sendButton');
         this.loadingOverlay = document.getElementById('loadingOverlay');
-        this.charCountElement = document.getElementById('charCount');
         
         // Settings panel elements
         this.settingsToggle = document.getElementById('settingsToggle');
@@ -85,8 +84,8 @@ class ChatApp {
             });
 
             this.questionInput.addEventListener('input', () => {
-                this.updateCharacterCount();
                 this.updateSendButtonState();
+                this.autoResizeTextarea();
             });
         }
 
@@ -104,23 +103,25 @@ class ChatApp {
             btn.addEventListener('click', (e) => {
                 const question = e.currentTarget.getAttribute('data-question');
                 this.questionInput.value = question;
-                this.updateCharacterCount();
                 this.updateSendButtonState();
+                this.autoResizeTextarea();
                 // 移除自動發送，只填入輸入欄
             });
         });
 
         // 點擊設定面板外部時關閉
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.bottom-right-settings')) {
+            if (!e.target.closest('.top-right-settings')) {
                 this.hideSettingsPanel();
             }
         });
 
         // 防止設定面板內部點擊事件冒泡
-        this.settingsPanel.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+        if (this.settingsPanel) {
+            this.settingsPanel.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
     }
 
     toggleSettingsPanel() {
@@ -177,8 +178,8 @@ class ChatApp {
         
         // 清空輸入框
         this.questionInput.value = '';
-        this.updateCharacterCount();
         this.updateSendButtonState();
+        this.autoResizeTextarea();
 
         try {
             let response;
@@ -299,18 +300,19 @@ class ChatApp {
         this.settingsToggle.classList.remove('active');
     }
 
-    updateCharacterCount() {
-        if (this.charCountElement && this.questionInput) {
-            const currentLength = this.questionInput.value.length;
-            this.charCountElement.textContent = currentLength.toLocaleString();
+    autoResizeTextarea() {
+        if (this.questionInput) {
+            // 重置高度以獲得正確的 scrollHeight
+            this.questionInput.style.height = 'auto';
             
-            if (currentLength > 45000) {
-                this.charCountElement.style.color = '#f44336';
-            } else if (currentLength > 40000) {
-                this.charCountElement.style.color = '#ff9800';
-            } else {
-                this.charCountElement.style.color = '#666';
-            }
+            // 計算所需高度
+            const minHeight = 24; // 最小高度（一行）
+            const maxHeight = 120; // 最大高度
+            const scrollHeight = this.questionInput.scrollHeight;
+            
+            // 設置新高度
+            const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+            this.questionInput.style.height = newHeight + 'px';
         }
     }
 
@@ -607,7 +609,7 @@ class ChatApp {
         messageDiv.innerHTML = responseHtml;
         
         this.chatContainer.appendChild(messageDiv);
-        this.scrollToBottom();
+        this.scrollToMessage(messageDiv);
     }
 
     addErrorMessage(errorText) {
@@ -755,6 +757,16 @@ class ChatApp {
     scrollToBottom() {
         setTimeout(() => {
             this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+        }, 100);
+    }
+
+    scrollToMessage(messageElement) {
+        setTimeout(() => {
+            messageElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start',
+                inline: 'nearest'
+            });
         }, 100);
     }
 

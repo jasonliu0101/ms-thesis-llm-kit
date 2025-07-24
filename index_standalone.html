@@ -11,6 +11,43 @@
     <div class="container">
         <header class="header">
             <h1><i class="fas fa-robot"></i> AI 問答系統</h1>
+            
+            <!-- Top Right Settings -->
+            <div class="top-right-settings">
+                <button id="settingsToggle" class="settings-toggle-btn">
+                    <i class="fas fa-cog"></i>
+                </button>
+                
+                <div class="settings-panel" id="settingsPanel">
+                    <!-- 設定選項 -->
+                    <div class="options-section">
+                        <h3><i class="fas fa-sliders-h"></i> 顯示選項</h3>
+                        <div class="options-grid">
+                            <label class="option-item">
+                                <input type="checkbox" id="showThinking" checked>
+                                <span class="checkmark"></span>
+                                <span class="option-text">
+                                    <i class="fas fa-brain"></i> 思考流程
+                                </span>
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" id="showReferences" checked>
+                                <span class="checkmark"></span>
+                                <span class="option-text">
+                                    <i class="fas fa-link"></i> 引用來源
+                                </span>
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" id="enableSearch" checked>
+                                <span class="checkmark"></span>
+                                <span class="option-text">
+                                    <i class="fas fa-search"></i> 網路搜尋
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </header>
 
         <div class="main-content">
@@ -51,46 +88,6 @@
                             <button id="sendButton" class="send-btn" disabled>
                                 <i class="fas fa-paper-plane"></i>
                             </button>
-                        </div>
-                        <div class="character-count">
-                            <span id="charCount">0</span> / 50,000 字元
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bottom Right Settings -->
-            <div class="bottom-right-settings" id="bottomRightSettings">
-                <button id="settingsToggle" class="settings-toggle-btn">
-                    <i class="fas fa-cog"></i>
-                </button>
-                
-                <div class="settings-panel" id="settingsPanel">
-                    <!-- 設定選項 -->
-                    <div class="options-section">
-                        <h3><i class="fas fa-sliders-h"></i> 顯示選項</h3>
-                        <div class="options-grid">
-                            <label class="option-item">
-                                <input type="checkbox" id="showThinking" checked>
-                                <span class="checkmark"></span>
-                                <span class="option-text">
-                                    <i class="fas fa-brain"></i> 思考流程
-                                </span>
-                            </label>
-                            <label class="option-item">
-                                <input type="checkbox" id="showReferences" checked>
-                                <span class="checkmark"></span>
-                                <span class="option-text">
-                                    <i class="fas fa-link"></i> 引用來源
-                                </span>
-                            </label>
-                            <label class="option-item">
-                                <input type="checkbox" id="enableSearch" checked>
-                                <span class="checkmark"></span>
-                                <span class="option-text">
-                                    <i class="fas fa-search"></i> 網路搜尋
-                                </span>
-                            </label>
                         </div>
                     </div>
                 </div>
