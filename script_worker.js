@@ -31,22 +31,41 @@ class ChatApp {
         // Settings panel elements
         this.settingsToggle = document.getElementById('settingsToggle');
         this.settingsPanel = document.getElementById('settingsPanel');
+        
+        // 檢查關鍵元素是否存在
+        const requiredElements = [
+            'chatContainer', 'questionInput', 'sendButton', 'settingsToggle',
+            'showReferencesCheckbox', 'showThinkingCheckbox'
+        ];
+        
+        for (const elementName of requiredElements) {
+            if (!this[elementName]) {
+                console.error(`Required element not found: ${elementName}`);
+                throw new Error(`無法找到必需的元素: ${elementName}`);
+            }
+        }
     }
 
     bindEvents() {
         // Settings panel toggle
-        this.settingsToggle.addEventListener('click', () => {
-            this.toggleSettingsPanel();
-        });
+        if (this.settingsToggle) {
+            this.settingsToggle.addEventListener('click', () => {
+                this.toggleSettingsPanel();
+            });
+        }
 
         // 選項變更事件
-        this.showReferencesCheckbox.addEventListener('change', () => {
-            this.saveSettings();
-        });
+        if (this.showReferencesCheckbox) {
+            this.showReferencesCheckbox.addEventListener('change', () => {
+                this.saveSettings();
+            });
+        }
 
-        this.showThinkingCheckbox.addEventListener('change', () => {
-            this.saveSettings();
-        });
+        if (this.showThinkingCheckbox) {
+            this.showThinkingCheckbox.addEventListener('change', () => {
+                this.saveSettings();
+            });
+        }
 
         if (this.enableSearchCheckbox) {
             this.enableSearchCheckbox.addEventListener('change', () => {
@@ -55,26 +74,30 @@ class ChatApp {
         }
 
         // 輸入框事件
-        this.questionInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
+        if (this.questionInput) {
+            this.questionInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (this.canSendMessage()) {
+                        this.sendMessage();
+                    }
+                }
+            });
+
+            this.questionInput.addEventListener('input', () => {
+                this.updateCharacterCount();
+                this.updateSendButtonState();
+            });
+        }
+
+        // 發送按鈕事件
+        if (this.sendButton) {
+            this.sendButton.addEventListener('click', () => {
                 if (this.canSendMessage()) {
                     this.sendMessage();
                 }
-            }
-        });
-
-        this.questionInput.addEventListener('input', () => {
-            this.updateCharacterCount();
-            this.updateSendButtonState();
-        });
-
-        // 發送按鈕事件
-        this.sendButton.addEventListener('click', () => {
-            if (this.canSendMessage()) {
-                this.sendMessage();
-            }
-        });
+            });
+        }
 
         // 快速問題按鈕事件
         document.querySelectorAll('.question-btn-compact').forEach(btn => {
@@ -136,6 +159,7 @@ class ChatApp {
     }
 
     canSendMessage() {
+        if (!this.questionInput) return false;
         const hasQuestion = this.questionInput.value.trim().length > 0;
         return this.workerUrl && hasQuestion;
     }
@@ -276,7 +300,7 @@ class ChatApp {
     }
 
     updateCharacterCount() {
-        if (this.charCountElement) {
+        if (this.charCountElement && this.questionInput) {
             const currentLength = this.questionInput.value.length;
             this.charCountElement.textContent = currentLength.toLocaleString();
             
@@ -778,7 +802,35 @@ class ChatApp {
     }
 }
 
-// 初始化應用
-document.addEventListener('DOMContentLoaded', () => {
-    new ChatApp();
-});
+// 確保DOM完全加載後再初始化應用
+function initializeApp() {
+    try {
+        console.log('正在初始化ChatApp...');
+        new ChatApp();
+        console.log('ChatApp初始化成功');
+    } catch (error) {
+        console.error('ChatApp初始化失敗:', error);
+        // 延遲重試
+        setTimeout(() => {
+            console.log('嘗試重新初始化ChatApp...');
+            try {
+                new ChatApp();
+                console.log('ChatApp重新初始化成功');
+            } catch (retryError) {
+                console.error('ChatApp重新初始化也失敗:', retryError);
+                alert('應用程式初始化失敗，請重新整理頁面。');
+            }
+        }, 1000);
+    }
+}
+
+// 多種方式確保初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else if (document.readyState === 'interactive' || document.readyState === 'complete') {
+    // DOM已經加載完成
+    setTimeout(initializeApp, 100);
+} else {
+    // 備用方案
+    window.addEventListener('load', initializeApp);
+}
