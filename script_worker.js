@@ -2,7 +2,7 @@ class ChatApp {
     constructor() {
         // 設定 Worker URL - 部署後請更新此 URL
         // 部署說明請參考 README_DEPLOYMENT.md
-        this.workerUrl = 'https://your-worker-name.your-subdomain.workers.dev'; // 請替換為您的 Worker URL
+        this.workerUrl = 'https://ai-qa-backend.jasonliu1563.workers.dev'; // 請替換為您的 Worker URL
         
         this.initializeElements();
         this.bindEvents();
@@ -225,13 +225,23 @@ class ChatApp {
         });
 
         if (!response.ok) {
-            let errorMessage = `HTTP ${response.status}`;
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            
+            // 只嘗試讀取一次 response body
             try {
-                const errorData = await response.json();
-                errorMessage = errorData.error || errorMessage;
-            } catch (e) {
-                errorMessage = await response.text() || errorMessage;
+                const responseText = await response.text();
+                if (responseText) {
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (parseError) {
+                        errorMessage = responseText || errorMessage;
+                    }
+                }
+            } catch (readError) {
+                console.warn('無法讀取錯誤回應內容:', readError);
             }
+            
             throw new Error(`Worker API 錯誤: ${errorMessage}`);
         }
 
