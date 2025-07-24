@@ -4,6 +4,11 @@ class ChatApp {
         // 部署說明請參考 README_DEPLOYMENT.md
         this.workerUrl = 'https://ai-qa-backend.jasonliu1563.workers.dev'; // 請替換為您的 Worker URL
         
+        // 調試信息
+        console.log('=== ChatApp 初始化 ===');
+        console.log('設定的 Worker URL:', this.workerUrl);
+        console.log('當前頁面位置:', window.location.href);
+        
         this.initializeElements();
         this.bindEvents();
         this.loadSavedSettings();
@@ -208,6 +213,18 @@ class ChatApp {
             throw new Error('請先設定 Worker URL');
         }
 
+        // 確保 URL 是絕對路徑且格式正確
+        let finalUrl = this.workerUrl;
+        if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+            finalUrl = 'https://' + finalUrl;
+        }
+        
+        // 調試信息
+        console.log('=== API 調用詳細信息 ===');
+        console.log('原始 workerUrl:', this.workerUrl);
+        console.log('最終 URL:', finalUrl);
+        console.log('當前頁面 URL:', window.location.href);
+
         const requestBody = {
             question: question,
             options: {
@@ -216,7 +233,9 @@ class ChatApp {
             }
         };
 
-        const response = await fetch(this.workerUrl, {
+        console.log('請求體:', JSON.stringify(requestBody, null, 2));
+
+        const response = await fetch(finalUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -224,12 +243,16 @@ class ChatApp {
             body: JSON.stringify(requestBody)
         });
 
+        console.log('收到回應，狀態:', response.status, response.statusText);
+        console.log('實際請求的 URL:', response.url);
+
         if (!response.ok) {
             let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
             
-            // 只嘗試讀取一次 response body
+            // 只嘗試讀取一次 response body - 克隆 response 以避免 stream 問題
             try {
-                const responseText = await response.text();
+                const responseClone = response.clone();
+                const responseText = await responseClone.text();
                 if (responseText) {
                     try {
                         const errorData = JSON.parse(responseText);
