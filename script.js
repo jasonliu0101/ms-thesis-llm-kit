@@ -469,7 +469,10 @@ class ChatApp {
         let answerText = '';
         let thinkingText = '';
 
-        // 從 parts 中提取內容
+        // 從 parts 中提取內容，處理 grounding API 可能產生的重複內容
+        const textParts = [];
+        const thoughtParts = [];
+        
         candidate.content.parts.forEach((part, index) => {
             if (part.text) {
                 console.log(`Part ${index}:`, {
@@ -481,12 +484,25 @@ class ChatApp {
                 
                 // 檢查是否為思考內容
                 if (part.thought === true || part.text.includes('<thinking>')) {
-                    thinkingText += part.text + '\n';
+                    thoughtParts.push(part.text);
                 } else {
-                    answerText += part.text + '\n';
+                    textParts.push(part.text);
                 }
             }
         });
+
+        // 處理思考內容
+        thinkingText = thoughtParts.join('\n');
+
+        // 處理回答內容 - 如果有多個 text parts，只取最後一個（通常是最完整的）
+        if (textParts.length > 0) {
+            if (textParts.length > 1) {
+                console.log(`⚠️ 發現 ${textParts.length} 個文本 parts，只使用最後一個避免重複`);
+                answerText = textParts[textParts.length - 1];
+            } else {
+                answerText = textParts[0];
+            }
+        }
 
         // 如果有 enhancedThinkingContent，優先使用它作為思考內容
         if (candidate.enhancedThinkingContent) {
