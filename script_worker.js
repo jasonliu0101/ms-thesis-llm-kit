@@ -2,7 +2,7 @@ class ChatApp {
     constructor() {
         // 設定 Worker URL - 部署後請更新此 URL
         // 部署說明請參考 README_DEPLOYMENT.md
-        this.workerUrl = 'https://your-worker-name.your-subdomain.workers.dev'; // 請替換為您的 Worker URL
+        this.workerUrl = 'ai-qa-backend.jasonliu1563.workers.dev'; // 請替換為您的 Worker URL
         
         this.initializeElements();
         this.bindEvents();
