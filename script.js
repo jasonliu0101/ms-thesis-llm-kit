@@ -347,15 +347,15 @@ class ChatApp {
             }],
             systemInstruction: {
                 parts: [{
-                    text: "請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請結合網路搜尋資料提供準確答案，並確實引用相關來源。"
+                    text: "您是一個回答法律問題的人工智慧，請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請結合網路搜尋資料提供準確答案，並確實引用相關來源。"
                 }]
             },
             generationConfig: {
-                temperature: 0.1,
-                maxOutputTokens: 8192,
+                temperature: 0,
+                maxOutputTokens: 65536,
                 responseMimeType: "text/plain",
                 thinking_config: {
-                    thinking_budget: 8192,
+                    thinking_budget: 24576,
                     include_thoughts: true
                 }
             }
@@ -386,15 +386,15 @@ class ChatApp {
             }],
             systemInstruction: {
                 parts: [{
-                    text: "請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請進行深度分析和邏輯推理，展示您的思考過程、分析步驟和推理邏輯。"
+                    text: "您是一個回答法律問題的人工智慧，請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請進行深度分析和邏輯推理，展示您的思考過程、分析步驟和推理邏輯。"
                 }]
             },
             generationConfig: {
-                temperature: 0.1,
-                maxOutputTokens: 8192,
+                temperature: 0,
+                maxOutputTokens: 65536,
                 responseMimeType: "text/plain",
                 thinking_config: {
-                    thinking_budget: 16384,
+                    thinking_budget: 24576,
                     include_thoughts: true
                 }
             }
