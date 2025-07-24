@@ -1,21 +1,14 @@
 {
-  "name": "ai-qa-system",
+  "name": "ms-thesis-llm-kit",
   "version": "1.0.0",
-  "description": "AI Q&A System with Gemini - Supports both standalone and distributed deployment",
-  "main": "worker.js",
+  "description": "AI Q&A System with Gemini - Static website deployment",
   "scripts": {
-    "build": "echo 'Building static files...' && npm run optimize",
-    "optimize": "echo 'Optimizing for production...'",
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
     "serve": "python3 -m http.server 8000",
     "serve-node": "npx serve .",
     "start": "npm run serve"
   },
-  "keywords": ["ai", "qa", "gemini", "cloudflare", "workers", "github-pages"],
-  "author": "Your Name",
+  "keywords": ["ai", "qa", "gemini", "static-site", "github-pages"],
+  "author": "jasonliu0101",
   "license": "MIT",
-  "devDependencies": {
-    "wrangler": "^3.0.0"
-  }
+  "type": "module"
 }

@@ -1,5 +1,5 @@
-# GitHub Pages 快速部署工作流程
-name: Deploy to GitHub Pages
+# GitHub Pages 靜態網站部署工作流程
+name: Deploy Static Site to GitHub Pages
 
 on:
   # 當推送到 main 分支時觸發
@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # 單一作業：構建並部署
+  # 靜態網站部署作業
   deploy:
     runs-on: ubuntu-latest
     environment:
@@ -35,9 +35,10 @@ jobs:
       - name: 🔧 設置 GitHub Pages
         uses: actions/configure-pages@v4
 
-      - name: 📤 上傳網站文件
+      - name: 📤 上傳靜態網站文件
         uses: actions/upload-pages-artifact@v3
         with:
+          # 上傳整個根目錄，包含所有靜態文件
           path: '.'
 
       - name: 🚀 部署到 GitHub Pages
@@ -46,5 +47,6 @@ jobs:
 
       - name: ✅ 部署完成
         run: |
-          echo "🎉 網站已成功部署到: ${{ steps.deployment.outputs.page_url }}"
-          echo "⚡ GitHub Actions 部署完成！"
+          echo "🎉 靜態網站已成功部署到: ${{ steps.deployment.outputs.page_url }}"
+          echo "⚡ 部署時間: $(date)"
+          echo "📁 部署內容: HTML, CSS, JS 靜態文件"
