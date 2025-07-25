@@ -809,15 +809,19 @@ class ChatApp {
             references = this.extractReferences(candidate.groundingMetadata);
             console.log('提取到引用來源:', references.length, '個');
             
-            // 如果沒有找到有效的引用來源，則從回答文本中移除參考資料部分
+            // 如果沒有找到有效的引用來源，則從回答文本中移除參考資料部分和註腳
             if (references.length === 0) {
-                console.log('⚠️ 沒有找到有效引用來源，移除文本中的參考資料部分');
+                console.log('⚠️ 沒有找到有效引用來源，移除文本中的參考資料部分和註腳');
                 // 移除從 "---\n**參考資料：**" 開始到文本結尾的所有內容
                 answerText = answerText.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
                 // 也處理可能的變體格式
                 answerText = answerText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
                 answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
-                console.log('✅ 已移除參考資料部分，清理後內容長度:', answerText.length);
+                
+                // 移除文本中的註腳編號 [1], [2], [3] 等
+                answerText = answerText.replace(/\[\d+\]/g, '');
+                
+                console.log('✅ 已移除參考資料部分和註腳，清理後內容長度:', answerText.length);
             }
         }
 
@@ -950,8 +954,9 @@ class ChatApp {
             </div>
         `;
 
-        // 顯示引用來源（如果啟用且有內容）
+        // 顯示引用來源（只有在啟用、有內容且數量大於0時才顯示）
         if (this.showReferencesCheckbox.checked && data.references && data.references.length > 0) {
+            console.log('✅ 顯示引用來源區塊，數量:', data.references.length);
             responseHtml += `
                 <div class="references-section">
                     <div class="references-header">
@@ -966,6 +971,12 @@ class ChatApp {
                     </div>
                 </div>
             `;
+        } else {
+            console.log('❌ 不顯示引用來源區塊，原因:', 
+                !this.showReferencesCheckbox.checked ? '引用來源開關關閉' : 
+                !data.references ? '沒有引用資料' : 
+                data.references.length === 0 ? '引用來源數量為0' : '未知原因'
+            );
         }
 
         responseHtml += `</div>`;
