@@ -822,7 +822,12 @@ class ChatApp {
             console.log('🧹 清理前文本長度:', answerText.length);
             console.log('🔍 清理前文本結尾預覽:', answerText.substring(answerText.length - 200));
             
-            // 移除各種可能的參考資料格式
+            // 核心清理邏輯：直接截斷「參考資料：」字樣及其後的所有內容
+            // 這個正則會匹配任何包含「參考資料」的行及其後面的所有內容
+            answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
+            
+            // 額外清理各種可能的格式變體，確保徹底移除
             // 1. 移除從 "---**參考資料：**" 開始到文本結尾的內容
             answerText = answerText.replace(/---\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
             
@@ -837,12 +842,6 @@ class ChatApp {
             
             // 5. 移除從 "**引用資料：**" 開始到文本結尾的內容
             answerText = answerText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
-            
-            // 6. 移除從 "參考資料：" 開始到文本結尾的內容（沒有加粗）
-            answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
-            
-            // 7. 移除從 "引用資料：" 開始到文本結尾的內容
-            answerText = answerText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
             
             // 8. 移除文本中的註腳編號 [1], [2], [3] 等，包括後面可能跟隨的其他字符
             answerText = answerText.replace(/\[\d+\](\[\d+\])*/g, '');
