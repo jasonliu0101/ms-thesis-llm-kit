@@ -809,7 +809,7 @@ class ChatApp {
             references = this.extractReferences(candidate.groundingMetadata);
             console.log('提取到引用來源:', references.length, '個');
             
-            // 如果沒有找到有效的引用來源，則從回答文本中移除參考資料部分和註腳
+            // 處理引用來源的顯示模式
             if (references.length === 0) {
                 console.log('⚠️ 沒有找到有效引用來源，移除文本中的參考資料部分和註腳');
                 // 移除從 "---\n**參考資料：**" 開始到文本結尾的所有內容
@@ -822,6 +822,26 @@ class ChatApp {
                 answerText = answerText.replace(/\[\d+\]/g, '');
                 
                 console.log('✅ 已移除參考資料部分和註腳，清理後內容長度:', answerText.length);
+            } else if (references.length >= 10) {
+                console.log(`📋 引用來源數量 ${references.length} ≥ 10，採用歸類顯示模式`);
+                // 當引用來源數量不少於10個時，移除文本中的註腳，改為在引用來源區塊統一顯示
+                
+                // 移除從 "---\n**參考資料：**" 或 "引用資料：" 開始到文本結尾的內容
+                answerText = answerText.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+                answerText = answerText.replace(/---\s*\n\s*\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+                answerText = answerText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+                answerText = answerText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+                answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
+                answerText = answerText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
+                
+                // 移除文本中的註腳編號 [1], [2], [3] 等
+                answerText = answerText.replace(/\[\d+\]/g, '');
+                
+                console.log('✅ 已移除文本中的註腳和參考資料列表，將統一在引用來源區塊顯示');
+                console.log('📊 歸類後文本長度:', answerText.length, '引用來源區塊將顯示', references.length, '個來源');
+            } else {
+                console.log(`📝 引用來源數量 ${references.length} < 10，保持文本中的註腳顯示`);
+                // 引用來源少於10個時，保持原有顯示方式（文本註腳 + 引用來源區塊）
             }
         }
 
@@ -957,17 +977,24 @@ class ChatApp {
         // 顯示引用來源（只有在啟用、有內容且數量大於0時才顯示）
         if (this.showReferencesCheckbox.checked && data.references && data.references.length > 0) {
             console.log('✅ 顯示引用來源區塊，數量:', data.references.length);
+            
+            // 根據引用數量決定區塊標題和樣式
+            const isLargeReferenceSet = data.references.length >= 10;
+            const referenceTitle = isLargeReferenceSet ? '引用來源匯總' : '引用來源';
+            const referenceIcon = isLargeReferenceSet ? 'fas fa-list-alt' : 'fas fa-link';
+            
             responseHtml += `
-                <div class="references-section">
+                <div class="references-section ${isLargeReferenceSet ? 'large-reference-set' : ''}">
                     <div class="references-header">
-                        <i class="fas fa-link"></i>
-                        <span>引用來源</span>
+                        <i class="${referenceIcon}"></i>
+                        <span>${referenceTitle}</span>
+                        ${isLargeReferenceSet ? `<span class="reference-count">(${data.references.length} 個來源)</span>` : ''}
                         <button class="toggle-references" onclick="this.parentElement.parentElement.classList.toggle('collapsed')">
                             <i class="fas fa-chevron-up"></i>
                         </button>
                     </div>
                     <div class="references-content">
-                        ${this.formatReferences(data.references)}
+                        ${isLargeReferenceSet ? this.formatLargeReferenceSet(data.references) : this.formatReferences(data.references)}
                     </div>
                 </div>
             `;
@@ -1077,6 +1104,40 @@ class ChatApp {
                 </div>
             </div>
         `).join('');
+    }
+
+    formatLargeReferenceSet(references) {
+        if (!references || references.length === 0) return '';
+        
+        // 將大量引用來源以更緊湊的方式顯示
+        return `
+            <div class="large-reference-notice">
+                <p><strong>📋 本回答引用了 ${references.length} 個來源，已移除文本中的註腳編號以提升閱讀體驗。</strong></p>
+                <p>以下是完整的引用來源列表：</p>
+            </div>
+            <div class="large-reference-list">
+                ${references.map((ref, index) => `
+                    <div class="reference-item compact">
+                        <div class="reference-number">${index + 1}</div>
+                        <div class="reference-details">
+                            <a href="${ref.url}" target="_blank" rel="noopener noreferrer" title="${this.escapeHtml(ref.title)}">
+                                ${this.escapeHtml(ref.title.length > 80 ? ref.title.substring(0, 77) + '...' : ref.title)}
+                            </a>
+                            <div class="reference-domain">${this.extractDomain(ref.url)}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    extractDomain(url) {
+        try {
+            const domain = new URL(url).hostname;
+            return domain.replace('www.', '');
+        } catch (e) {
+            return url;
+        }
     }
 
     escapeHtml(text) {

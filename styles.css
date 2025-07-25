@@ -1777,3 +1777,104 @@ sup {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* 大量引用來源的特殊樣式 */
+.references-section.large-reference-set {
+    background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.05);
+}
+
+.references-section.large-reference-set .references-header {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.references-section.large-reference-set .references-content {
+    background: rgba(59, 130, 246, 0.03);
+}
+
+.reference-count {
+    font-size: 0.8rem;
+    color: #6b7280;
+    font-weight: 400;
+    margin-left: 8px;
+}
+
+.large-reference-notice {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+    color: #1e40af;
+}
+
+.large-reference-notice p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.large-reference-notice p:first-child {
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.large-reference-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 8px;
+}
+
+.reference-item.compact {
+    background: white;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+    border-radius: 6px;
+    padding: 8px;
+    transition: all 0.2s ease;
+    max-width: none;
+}
+
+.reference-item.compact:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+}
+
+.reference-item.compact .reference-number {
+    background: #3b82f6;
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+}
+
+.reference-item.compact .reference-details a {
+    color: #3b82f6;
+    font-size: 0.8rem;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reference-domain {
+    font-size: 0.65rem;
+    color: #9ca3af;
+    margin-top: 2px;
+    font-style: italic;
+}
+
+/* 響應式設計調整 */
+@media (max-width: 768px) {
+    .large-reference-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .reference-item.compact {
+        min-width: 0;
+    }
+}
