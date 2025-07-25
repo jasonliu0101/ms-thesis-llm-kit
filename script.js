@@ -808,6 +808,17 @@ class ChatApp {
         if (candidate.groundingMetadata) {
             references = this.extractReferences(candidate.groundingMetadata);
             console.log('提取到引用來源:', references.length, '個');
+            
+            // 如果沒有找到有效的引用來源，則從回答文本中移除參考資料部分
+            if (references.length === 0) {
+                console.log('⚠️ 沒有找到有效引用來源，移除文本中的參考資料部分');
+                // 移除從 "---\n**參考資料：**" 開始到文本結尾的所有內容
+                answerText = answerText.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+                // 也處理可能的變體格式
+                answerText = answerText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+                answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
+                console.log('✅ 已移除參考資料部分，清理後內容長度:', answerText.length);
+            }
         }
 
         console.log('=== 最終提取結果 ===');
@@ -830,6 +841,17 @@ class ChatApp {
         const references = [];
         const seenUrls = new Set();
 
+        // 添加詳細的調試信息
+        console.log('=== 提取引用來源詳細信息 ===');
+        console.log('groundingSupports 數量:', groundingMetadata.groundingSupports?.length || 0);
+        console.log('groundingChunks 數量:', groundingMetadata.groundingChunks?.length || 0);
+
+        // 檢查 groundingChunks 是否存在且有內容
+        if (!groundingMetadata.groundingChunks || groundingMetadata.groundingChunks.length === 0) {
+            console.log('⚠️ 沒有 groundingChunks 或 groundingChunks 為空');
+            return references; // 返回空數組
+        }
+
         if (groundingMetadata.groundingSupports) {
             groundingMetadata.groundingSupports.forEach(support => {
                 if (support.groundingChunkIndices && groundingMetadata.groundingChunks) {
@@ -846,6 +868,7 @@ class ChatApp {
                                     url: url,
                                     snippet: ''
                                 });
+                                console.log(`✅ 添加引用: ${title} -> ${url}`);
                             }
                         }
                     });
@@ -853,6 +876,7 @@ class ChatApp {
             });
         }
 
+        console.log(`📋 最終提取到 ${references.length} 個有效引用來源`);
         return references;
     }
 
