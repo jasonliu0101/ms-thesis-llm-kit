@@ -184,7 +184,7 @@ async function callGeminiAPI(question, env, withSearch = true) {
     requestBody.systemInstruction = {
       parts: [
         {
-          text: "您是一個回答法律問題的人工智慧，請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請結合網路搜尋資料與深度邏輯推理：1. 基於搜尋到的最新資料提供準確答案，並確實引用相關來源 2. 同時進行深度分析和邏輯推理，展示您的思考過程、分析步驟和推理邏輯 3. 將網路資料與第一性原理結合，逐步建構完整論證 4. 既要有實證依據（網路資料），也要有理論基礎（邏輯推理），回答請先講結論，接著從民法、刑法、行政法等三大面向進行分析，若有詮釋其他面向的需求，可以多加說明。請積極上網找資料補充，追求補充資料的充足，資料來源未必要是官方法律資料，可以是網路文章、部落格、經驗分享、新聞等。"
+          text: "請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請結合網路搜尋資料與深度邏輯推理：1. 基於搜尋到的最新資料提供準確答案，並確實引用相關來源 2. 同時進行深度分析和邏輯推理，展示您的思考過程、分析步驟和推理邏輯 3. 將網路資料與第一性原理結合，逐步建構完整論證 4. 既要有實證依據（網路資料），也要有理論基礎（邏輯推理）"
         }
       ]
     };
@@ -195,7 +195,7 @@ async function callGeminiAPI(question, env, withSearch = true) {
     requestBody.systemInstruction = {
       parts: [
         {
-          text: "您是一個回答法律問題的人工智慧，請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請進行純粹的邏輯推理分析：1. 專注於深度分析和邏輯推理，詳細展示您的思考過程、分析步驟和推理邏輯 2. 從第一性原理出發，逐步建構論證 3. 提供最深層的理論思考與概念探討，回答請先講結論，接著從民法、刑法、行政法等三大面向進行分析，若有詮釋其他面向的需求，可以多加說明。"
+          text: "請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請進行純粹的邏輯推理分析：1. 專注於深度分析和邏輯推理，詳細展示您的思考過程、分析步驟和推理邏輯 2. 從第一性原理出發，逐步建構論證 3. 提供最深層的理論思考與概念探討"
         }
       ]
     };
@@ -247,77 +247,6 @@ async function callGeminiAPI(question, env, withSearch = true) {
     if (candidate.content && candidate.content.parts) {
       candidate.content.parts.forEach((part, index) => {
         console.log(`  - Part ${index}: length=${part.text?.length || 0}, thought=${part.thought}`);
-      });
-    }
-  }
-
-  // 處理重複內容：如果是 grounding 請求且有多個非思考的 text parts，只保留最後一個
-  if (withSearch && responseData.candidates && responseData.candidates[0]) {
-    const candidate = responseData.candidates[0];
-    if (candidate.content && candidate.content.parts) {
-      const parts = candidate.content.parts;
-      const nonThoughtParts = parts.filter(part => part.thought !== true && part.text);
-      
-      if (nonThoughtParts.length >= 2) {
-        console.log(`⚠️ Worker端發現 ${nonThoughtParts.length} 個非思考內容 parts，進行去重處理`);
-        nonThoughtParts.forEach((part, index) => {
-          console.log(`  NonThought Part ${index}: length=${part.text?.length || 0}`);
-        });
-        
-        // 保留思考內容和最後一個非思考內容
-        const thoughtParts = parts.filter(part => part.thought === true);
-        const lastNonThoughtPart = nonThoughtParts[nonThoughtParts.length - 1];
-        
-        // 重構 parts 數組
-        candidate.content.parts = [...thoughtParts, lastNonThoughtPart];
-        
-        console.log(`✅ Worker端去重完成，保留最後一個非思考內容，長度: ${lastNonThoughtPart.text?.length || 0}`);
-        console.log(`📋 最終 parts 數量: ${candidate.content.parts.length} (${thoughtParts.length} 思考 + 1 回答)`);
-      }
-    }
-  }
-
-  // 新增：Worker端文本清理 - 移除參考資料和註腳
-  if (responseData.candidates && responseData.candidates[0]) {
-    const candidate = responseData.candidates[0];
-    if (candidate.content && candidate.content.parts) {
-      candidate.content.parts.forEach((part, index) => {
-        if (part.text && part.thought !== true) {
-          console.log(`🧹 清理 Part ${index} 文本內容...`);
-          console.log(`   - 清理前長度: ${part.text.length}`);
-          
-          let cleanedText = part.text;
-          
-          // 1. 移除「參考資料：」及其後的所有內容
-          cleanedText = cleanedText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
-          
-          // 2. 移除「引用資料：」及其後的所有內容
-          cleanedText = cleanedText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
-          
-          // 3. 移除「**參考資料：**」及其後的所有內容
-          cleanedText = cleanedText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-          
-          // 4. 移除「**引用資料：**」及其後的所有內容  
-          cleanedText = cleanedText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
-          
-          // 5. 移除從「---」開始的參考資料部分
-          cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?參考資料[：:][\s\S]*$/m, '').trim();
-          cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?引用資料[：:][\s\S]*$/m, '').trim();
-          
-          // 6. 移除所有註腳編號 [1], [2], [3] 等，包括連續註腳 [1][2]
-          cleanedText = cleanedText.replace(/\[\d+\](\[\d+\])*/g, '');
-          
-          // 7. 清理多餘的空白和換行
-          cleanedText = cleanedText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
-          
-          // 更新文本內容
-          if (cleanedText !== part.text) {
-            console.log(`   ✅ 文本已清理，長度: ${part.text.length} -> ${cleanedText.length}`);
-            part.text = cleanedText;
-          } else {
-            console.log(`   ⚪ 文本無需清理`);
-          }
-        }
       });
     }
   }

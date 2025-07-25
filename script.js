@@ -866,19 +866,27 @@ class ChatApp {
             // 這個正則會匹配任何包含「參考資料」的行及其後面的所有內容
             answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
             answerText = answerText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/引用來源[：:][\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/參考來源[：:][\s\S]*$/m, '').trim();
             
             // 額外清理各種可能的格式變體，確保徹底移除
             // 1. 移除從 "---**參考資料：**" 開始到文本結尾的內容
             answerText = answerText.replace(/---\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/---\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/---\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
             
             // 2. 移除從 "---\n**參考資料：**" 開始到文本結尾的內容
             answerText = answerText.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/---\s*\n\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/---\s*\n\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
             
             // 3. 移除從 "---\n**引用資料：**" 開始到文本結尾的內容
             answerText = answerText.replace(/---\s*\n\s*\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
             
             // 4. 移除從 "**參考資料：**" 開始到文本結尾的內容（不管前面有沒有 ---）
             answerText = answerText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
             
             // 5. 移除從 "**引用資料：**" 開始到文本結尾的內容
             answerText = answerText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
