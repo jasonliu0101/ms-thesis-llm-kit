@@ -771,11 +771,15 @@ class ChatApp {
         // 處理思考內容
         thinkingText = thoughtParts.join('\n');
 
-        // 處理回答內容 - 如果有多個 text parts，只取最後一個（通常是最完整的）
+        // 處理回答內容 - 如果有多個 text parts，選擇最長的（通常是最完整的）
         if (textParts.length > 0) {
             if (textParts.length > 1) {
-                console.log(`⚠️ 發現 ${textParts.length} 個文本 parts，只使用最後一個避免重複`);
-                answerText = textParts[textParts.length - 1];
+                console.log(`⚠️ 發現 ${textParts.length} 個文本 parts，選擇最長的避免重複`);
+                // 選擇最長的 part 作為主要回答
+                answerText = textParts.reduce((longest, current) => 
+                    current.length > longest.length ? current : longest
+                );
+                console.log(`✅ 選擇最長的回答內容，長度: ${answerText.length}`);
             } else {
                 answerText = textParts[0];
             }
