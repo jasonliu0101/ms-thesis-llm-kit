@@ -809,40 +809,29 @@ class ChatApp {
             references = this.extractReferences(candidate.groundingMetadata);
             console.log('提取到引用來源:', references.length, '個');
             
-            // 處理引用來源的顯示模式
+            // 統一處理：所有情況都移除文本中的註腳和參考資料，改為在引用來源區塊統一顯示
             if (references.length === 0) {
                 console.log('⚠️ 沒有找到有效引用來源，移除文本中的參考資料部分和註腳');
-                // 移除從 "---\n**參考資料：**" 開始到文本結尾的所有內容
-                answerText = answerText.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-                // 也處理可能的變體格式
-                answerText = answerText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-                answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
-                
-                // 移除文本中的註腳編號 [1], [2], [3] 等
-                answerText = answerText.replace(/\[\d+\]/g, '');
-                
-                console.log('✅ 已移除參考資料部分和註腳，清理後內容長度:', answerText.length);
             } else if (references.length >= 10) {
                 console.log(`📋 引用來源數量 ${references.length} ≥ 10，採用歸類顯示模式`);
-                // 當引用來源數量不少於10個時，移除文本中的註腳，改為在引用來源區塊統一顯示
-                
-                // 移除從 "---\n**參考資料：**" 或 "引用資料：" 開始到文本結尾的內容
-                answerText = answerText.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-                answerText = answerText.replace(/---\s*\n\s*\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
-                answerText = answerText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-                answerText = answerText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
-                answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
-                answerText = answerText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
-                
-                // 移除文本中的註腳編號 [1], [2], [3] 等
-                answerText = answerText.replace(/\[\d+\]/g, '');
-                
-                console.log('✅ 已移除文本中的註腳和參考資料列表，將統一在引用來源區塊顯示');
-                console.log('📊 歸類後文本長度:', answerText.length, '引用來源區塊將顯示', references.length, '個來源');
             } else {
-                console.log(`📝 引用來源數量 ${references.length} < 10，保持文本中的註腳顯示`);
-                // 引用來源少於10個時，保持原有顯示方式（文本註腳 + 引用來源區塊）
+                console.log(`� 引用來源數量 ${references.length}，採用標準無註腳模式`);
             }
+            
+            // 統一的文本清理邏輯：移除所有註腳和參考資料列表
+            // 移除從 "---\n**參考資料：**" 或 "引用資料：" 開始到文本結尾的內容
+            answerText = answerText.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/---\s*\n\s*\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
+            answerText = answerText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
+            
+            // 移除文本中的註腳編號 [1], [2], [3] 等
+            answerText = answerText.replace(/\[\d+\]/g, '');
+            
+            console.log('✅ 已統一移除文本中的註腳和參考資料列表，將在引用來源區塊統一顯示');
+            console.log('📊 清理後文本長度:', answerText.length, '引用來源數量:', references.length);
         }
 
         console.log('=== 最終提取結果 ===');
@@ -974,36 +963,35 @@ class ChatApp {
             </div>
         `;
 
-        // 顯示引用來源（只有在啟用、有內容且數量大於0時才顯示）
-        if (this.showReferencesCheckbox.checked && data.references && data.references.length > 0) {
-            console.log('✅ 顯示引用來源區塊，數量:', data.references.length);
+        // 顯示引用來源（只有當引用數量 ≥ 10 個時才顯示）
+        if (this.showReferencesCheckbox.checked && data.references && data.references.length >= 10) {
+            console.log('✅ 顯示引用來源區塊，數量:', data.references.length, '≥ 10');
             
-            // 根據引用數量決定區塊標題和樣式
-            const isLargeReferenceSet = data.references.length >= 10;
-            const referenceTitle = isLargeReferenceSet ? '引用來源匯總' : '引用來源';
-            const referenceIcon = isLargeReferenceSet ? 'fas fa-list-alt' : 'fas fa-link';
+            const referenceTitle = '引用來源匯總';
+            const referenceIcon = 'fas fa-list-alt';
             
             responseHtml += `
-                <div class="references-section ${isLargeReferenceSet ? 'large-reference-set' : ''}">
+                <div class="references-section large-reference-set">
                     <div class="references-header">
                         <i class="${referenceIcon}"></i>
                         <span>${referenceTitle}</span>
-                        ${isLargeReferenceSet ? `<span class="reference-count">(${data.references.length} 個來源)</span>` : ''}
+                        <span class="reference-count">(${data.references.length} 個來源)</span>
                         <button class="toggle-references" onclick="this.parentElement.parentElement.classList.toggle('collapsed')">
                             <i class="fas fa-chevron-up"></i>
                         </button>
                     </div>
                     <div class="references-content">
-                        ${isLargeReferenceSet ? this.formatLargeReferenceSet(data.references) : this.formatReferences(data.references)}
+                        ${this.formatLargeReferenceSet(data.references)}
                     </div>
                 </div>
             `;
         } else {
-            console.log('❌ 不顯示引用來源區塊，原因:', 
-                !this.showReferencesCheckbox.checked ? '引用來源開關關閉' : 
-                !data.references ? '沒有引用資料' : 
-                data.references.length === 0 ? '引用來源數量為0' : '未知原因'
-            );
+            const reason = !this.showReferencesCheckbox.checked ? '引用來源開關關閉' : 
+                          !data.references ? '沒有引用資料' : 
+                          data.references.length === 0 ? '引用來源數量為0' : 
+                          data.references.length < 10 ? `引用來源數量 ${data.references.length} < 10，隱藏引用區塊` : '未知原因';
+            
+            console.log('❌ 不顯示引用來源區塊，原因:', reason);
         }
 
         responseHtml += `</div>`;
