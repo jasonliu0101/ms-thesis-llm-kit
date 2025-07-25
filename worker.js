@@ -251,6 +251,91 @@ async function callGeminiAPI(question, env, withSearch = true) {
     }
   }
 
+  // 處理重複內容：如果是 grounding 請求且有多個非思考的 text parts，只保留最後一個
+  if (withSearch && responseData.candidates && responseData.candidates[0]) {
+    const candidate = responseData.candidates[0];
+    if (candidate.content && candidate.content.parts) {
+      const parts = candidate.content.parts;
+      const nonThoughtParts = parts.filter(part => part.thought !== true && part.text);
+      
+      if (nonThoughtParts.length >= 2) {
+        console.log(`⚠️ Worker端發現 ${nonThoughtParts.length} 個非思考內容 parts，進行去重處理`);
+        nonThoughtParts.forEach((part, index) => {
+          console.log(`  NonThought Part ${index}: length=${part.text?.length || 0}`);
+        });
+        
+        // 保留思考內容和最後一個非思考內容
+        const thoughtParts = parts.filter(part => part.thought === true);
+        const lastNonThoughtPart = nonThoughtParts[nonThoughtParts.length - 1];
+        
+        // 重構 parts 數組
+        candidate.content.parts = [...thoughtParts, lastNonThoughtPart];
+        
+        console.log(`✅ Worker端去重完成，保留最後一個非思考內容，長度: ${lastNonThoughtPart.text?.length || 0}`);
+        console.log(`📋 最終 parts 數量: ${candidate.content.parts.length} (${thoughtParts.length} 思考 + 1 回答)`);
+      }
+    }
+  }
+
+  // Worker端文本清理 - 移除參考資料和註腳
+  if (responseData.candidates && responseData.candidates[0]) {
+    const candidate = responseData.candidates[0];
+    if (candidate.content && candidate.content.parts) {
+      candidate.content.parts.forEach((part, index) => {
+        if (part.text && part.thought !== true) {
+          console.log(`🧹 清理 Part ${index} 文本內容...`);
+          console.log(`   - 清理前長度: ${part.text.length}`);
+          
+          let cleanedText = part.text;
+          
+          // 1. 移除「參考資料：」及其後的所有內容
+          cleanedText = cleanedText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
+          
+          // 2. 移除「引用資料：」及其後的所有內容
+          cleanedText = cleanedText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
+          
+          // 3. 移除「引用來源：」及其後的所有內容
+          cleanedText = cleanedText.replace(/引用來源[：:][\s\S]*$/m, '').trim();
+          
+          // 4. 移除「參考來源：」及其後的所有內容
+          cleanedText = cleanedText.replace(/參考來源[：:][\s\S]*$/m, '').trim();
+          
+          // 5. 移除「**參考資料：**」及其後的所有內容
+          cleanedText = cleanedText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+          
+          // 6. 移除「**引用資料：**」及其後的所有內容  
+          cleanedText = cleanedText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+          
+          // 7. 移除「**引用來源：**」及其後的所有內容
+          cleanedText = cleanedText.replace(/\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
+          
+          // 8. 移除「**參考來源：**」及其後的所有內容
+          cleanedText = cleanedText.replace(/\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
+          
+          // 9. 移除從「---」開始的參考資料部分
+          cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?參考資料[：:][\s\S]*$/m, '').trim();
+          cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?引用資料[：:][\s\S]*$/m, '').trim();
+          cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?引用來源[：:][\s\S]*$/m, '').trim();
+          cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?參考來源[：:][\s\S]*$/m, '').trim();
+          
+          // 10. 移除所有註腳編號 [1], [2], [3] 等，包括連續註腳 [1][2]
+          cleanedText = cleanedText.replace(/\[\d+\](\[\d+\])*/g, '');
+          
+          // 11. 清理多餘的空白和換行
+          cleanedText = cleanedText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+          
+          // 更新文本內容
+          if (cleanedText !== part.text) {
+            console.log(`   ✅ 文本已清理，長度: ${part.text.length} -> ${cleanedText.length}`);
+            part.text = cleanedText;
+          } else {
+            console.log(`   ⚪ 文本無需清理`);
+          }
+        }
+      });
+    }
+  }
+
   console.log(`=== 完成 Gemini API 調用 (withSearch: ${withSearch}) ===`);
   
   return responseData;
