@@ -822,6 +822,46 @@ class ChatApp {
             console.log('🧹 清理前文本長度:', answerText.length);
             console.log('🔍 清理前文本結尾預覽:', answerText.substring(answerText.length - 200));
             
+            // 新增：基於 grounding 內容的精確替換
+            if (candidate.groundingMetadata && candidate.groundingMetadata.groundingSupports) {
+                console.log('🎯 開始基於 grounding 內容進行精確替換');
+                
+                // 找出所有需要替換的 grounding 文本片段
+                const groundingSupports = candidate.groundingMetadata.groundingSupports;
+                let replacementCount = 0;
+                
+                groundingSupports.forEach((support, supportIndex) => {
+                    if (support.segment && support.groundingChunkIndices) {
+                        // 檢查是否包含 index 0 或之後的索引（通常 0 是參考資料相關）
+                        const hasReferenceIndex = support.groundingChunkIndices.some(index => index >= 0);
+                        
+                        if (hasReferenceIndex && support.segment.text) {
+                            const segmentText = support.segment.text.trim();
+                            
+                            // 跳過太短的片段（可能是標點符號）
+                            if (segmentText.length < 10) {
+                                console.log(`⏭️ 跳過過短的片段 ${supportIndex}: "${segmentText}"`);
+                                return;
+                            }
+                            
+                            // 檢查這個片段是否在文本中
+                            if (answerText.includes(segmentText)) {
+                                console.log(`🔄 替換 grounding 片段 ${supportIndex}: "${segmentText.substring(0, 50)}..."`);
+                                console.log(`   - 片段索引: [${support.groundingChunkIndices.join(', ')}]`);
+                                
+                                // 直接從文本中移除這個片段
+                                answerText = answerText.replace(segmentText, '');
+                                replacementCount++;
+                            } else {
+                                console.log(`⚠️ 未找到 grounding 片段 ${supportIndex}: "${segmentText.substring(0, 50)}..."`);
+                            }
+                        }
+                    }
+                });
+                
+                console.log(`✅ 完成 grounding 內容替換，共處理 ${replacementCount} 個片段`);
+            }
+            
             // 核心清理邏輯：直接截斷「參考資料：」字樣及其後的所有內容
             // 這個正則會匹配任何包含「參考資料」的行及其後面的所有內容
             answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
@@ -845,6 +885,9 @@ class ChatApp {
             
             // 8. 移除文本中的註腳編號 [1], [2], [3] 等，包括後面可能跟隨的其他字符
             answerText = answerText.replace(/\[\d+\](\[\d+\])*/g, '');
+            
+            // 9. 清理可能產生的多餘空白和換行
+            answerText = answerText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
             
             console.log('🧹 清理後文本長度:', answerText.length);
             console.log('🔍 清理後文本結尾預覽:', answerText.substring(answerText.length - 200));
