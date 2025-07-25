@@ -277,6 +277,51 @@ async function callGeminiAPI(question, env, withSearch = true) {
     }
   }
 
+  // 新增：Worker端文本清理 - 移除參考資料和註腳
+  if (responseData.candidates && responseData.candidates[0]) {
+    const candidate = responseData.candidates[0];
+    if (candidate.content && candidate.content.parts) {
+      candidate.content.parts.forEach((part, index) => {
+        if (part.text && part.thought !== true) {
+          console.log(`🧹 清理 Part ${index} 文本內容...`);
+          console.log(`   - 清理前長度: ${part.text.length}`);
+          
+          let cleanedText = part.text;
+          
+          // 1. 移除「參考資料：」及其後的所有內容
+          cleanedText = cleanedText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
+          
+          // 2. 移除「引用資料：」及其後的所有內容
+          cleanedText = cleanedText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
+          
+          // 3. 移除「**參考資料：**」及其後的所有內容
+          cleanedText = cleanedText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+          
+          // 4. 移除「**引用資料：**」及其後的所有內容  
+          cleanedText = cleanedText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+          
+          // 5. 移除從「---」開始的參考資料部分
+          cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?參考資料[：:][\s\S]*$/m, '').trim();
+          cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?引用資料[：:][\s\S]*$/m, '').trim();
+          
+          // 6. 移除所有註腳編號 [1], [2], [3] 等，包括連續註腳 [1][2]
+          cleanedText = cleanedText.replace(/\[\d+\](\[\d+\])*/g, '');
+          
+          // 7. 清理多餘的空白和換行
+          cleanedText = cleanedText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+          
+          // 更新文本內容
+          if (cleanedText !== part.text) {
+            console.log(`   ✅ 文本已清理，長度: ${part.text.length} -> ${cleanedText.length}`);
+            part.text = cleanedText;
+          } else {
+            console.log(`   ⚪ 文本無需清理`);
+          }
+        }
+      });
+    }
+  }
+
   console.log(`=== 完成 Gemini API 調用 (withSearch: ${withSearch}) ===`);
   
   return responseData;
