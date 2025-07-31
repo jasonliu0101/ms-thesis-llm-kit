@@ -901,29 +901,30 @@ class ChatApp {
             return references; // 返回空數組
         }
 
-        if (groundingMetadata.groundingSupports) {
-            groundingMetadata.groundingSupports.forEach(support => {
-                if (support.groundingChunkIndices && groundingMetadata.groundingChunks) {
-                    support.groundingChunkIndices.forEach(index => {
-                        const chunk = groundingMetadata.groundingChunks[index];
-                        if (chunk && chunk.web) {
-                            const url = chunk.web.uri;
-                            const title = chunk.web.title || 'Untitled';
-                            
-                            if (url && !seenUrls.has(url)) {
-                                seenUrls.add(url);
-                                references.push({
-                                    title: title,
-                                    url: url,
-                                    snippet: ''
-                                });
-                                console.log(`✅ 添加引用: ${title} -> ${url}`);
-                            }
-                        }
+        // 直接從 groundingChunks 提取所有有效的 web 引用
+        groundingMetadata.groundingChunks.forEach((chunk, index) => {
+            console.log(`🔍 檢查 Chunk ${index}:`, chunk);
+            if (chunk && chunk.web) {
+                const url = chunk.web.uri;
+                const title = chunk.web.title || 'Untitled';
+                
+                if (url && !seenUrls.has(url)) {
+                    seenUrls.add(url);
+                    references.push({
+                        title: title,
+                        url: url,
+                        snippet: ''
                     });
+                    console.log(`✅ 添加引用 ${references.length}: ${title} -> ${url}`);
+                } else if (url && seenUrls.has(url)) {
+                    console.log(`⚠️ 重複的 URL，已跳過: ${url}`);
+                } else {
+                    console.log(`⚠️ Chunk ${index} 沒有有效的 URL`);
                 }
-            });
-        }
+            } else {
+                console.log(`⚠️ Chunk ${index} 沒有 web 屬性:`, chunk);
+            }
+        });
 
         console.log(`📋 最終提取到 ${references.length} 個有效引用來源`);
         return references;
