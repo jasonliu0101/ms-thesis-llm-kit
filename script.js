@@ -819,8 +819,17 @@ class ChatApp {
         console.log('📝 清理註腳編號...');
         const beforeFootnoteClean = answerText.length;
         
-        // 移除所有註腳編號，包括連續的註腳
-        answerText = answerText.replace(/\[\d+\](\[\d+\])*/g, '');
+        // 多重清理策略，確保移除所有可能的註腳格式
+        // 1. 移除單個註腳 [1], [2], [3] 等
+        answerText = answerText.replace(/\[\d+\]/g, '');
+        // 2. 移除連續註腳 [1][2][3] 等
+        answerText = answerText.replace(/(\[\d+\])+/g, '');
+        // 3. 移除帶空格的註腳 [ 1 ], [ 2 ] 等
+        answerText = answerText.replace(/\[\s*\d+\s*\]/g, '');
+        // 4. 移除可能的註腳變體（加強版）
+        answerText = answerText.replace(/\[(\d+)\]/g, '');
+        // 5. 移除任何剩餘的數字方括號組合
+        answerText = answerText.replace(/\[[\d\s,]+\]/g, '');
         
         console.log(`✅ 註腳清理完成: 清理前 ${beforeFootnoteClean} 字元，清理後 ${answerText.length} 字元`);
 
