@@ -808,101 +808,67 @@ class ChatApp {
         if (candidate.groundingMetadata) {
             references = this.extractReferences(candidate.groundingMetadata);
             console.log('提取到引用來源:', references.length, '個');
-            
-            // 統一處理：所有情況都移除文本中的註腳和參考資料，改為在引用來源區塊統一顯示
-            if (references.length === 0) {
-                console.log('⚠️ 沒有找到有效引用來源，移除文本中的參考資料部分和註腳');
-            } else if (references.length >= 10) {
-                console.log(`📋 引用來源數量 ${references.length} ≥ 10，採用歸類顯示模式`);
-            } else {
-                console.log(`� 引用來源數量 ${references.length}，採用標準無註腳模式`);
-            }
-            
-            // 統一的文本清理邏輯：移除所有註腳和參考資料列表
-            console.log('🧹 清理前文本長度:', answerText.length);
-            console.log('🔍 清理前文本結尾預覽:', answerText.substring(answerText.length - 200));
-            
-            // 新增：基於 grounding 內容的精確替換
-            if (candidate.groundingMetadata && candidate.groundingMetadata.groundingSupports) {
-                console.log('🎯 開始基於 grounding 內容進行精確替換');
-                
-                // 找出所有需要替換的 grounding 文本片段
-                const groundingSupports = candidate.groundingMetadata.groundingSupports;
-                let replacementCount = 0;
-                
-                groundingSupports.forEach((support, supportIndex) => {
-                    if (support.segment && support.groundingChunkIndices) {
-                        // 檢查是否包含 index 0 或之後的索引（通常 0 是參考資料相關）
-                        const hasReferenceIndex = support.groundingChunkIndices.some(index => index >= 0);
-                        
-                        if (hasReferenceIndex && support.segment.text) {
-                            const segmentText = support.segment.text.trim();
-                            
-                            // 跳過太短的片段（可能是標點符號）
-                            if (segmentText.length < 10) {
-                                console.log(`⏭️ 跳過過短的片段 ${supportIndex}: "${segmentText}"`);
-                                return;
-                            }
-                            
-                            // 檢查這個片段是否在文本中
-                            if (answerText.includes(segmentText)) {
-                                console.log(`🔄 替換 grounding 片段 ${supportIndex}: "${segmentText.substring(0, 50)}..."`);
-                                console.log(`   - 片段索引: [${support.groundingChunkIndices.join(', ')}]`);
-                                
-                                // 直接從文本中移除這個片段
-                                answerText = answerText.replace(segmentText, '');
-                                replacementCount++;
-                            } else {
-                                console.log(`⚠️ 未找到 grounding 片段 ${supportIndex}: "${segmentText.substring(0, 50)}..."`);
-                            }
-                        }
-                    }
-                });
-                
-                console.log(`✅ 完成 grounding 內容替換，共處理 ${replacementCount} 個片段`);
-            }
-            
-            // 核心清理邏輯：直接截斷「參考資料：」字樣及其後的所有內容
-            // 這個正則會匹配任何包含「參考資料」的行及其後面的所有內容
-            answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
-            answerText = answerText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
-            answerText = answerText.replace(/引用來源[：:][\s\S]*$/m, '').trim();
-            answerText = answerText.replace(/參考來源[：:][\s\S]*$/m, '').trim();
-            
-            // 額外清理各種可能的格式變體，確保徹底移除
-            // 1. 移除從 "---**參考資料：**" 開始到文本結尾的內容
-            answerText = answerText.replace(/---\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-            answerText = answerText.replace(/---\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
-            answerText = answerText.replace(/---\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
-            
-            // 2. 移除從 "---\n**參考資料：**" 開始到文本結尾的內容
-            answerText = answerText.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-            answerText = answerText.replace(/---\s*\n\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
-            answerText = answerText.replace(/---\s*\n\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
-            
-            // 3. 移除從 "---\n**引用資料：**" 開始到文本結尾的內容
-            answerText = answerText.replace(/---\s*\n\s*\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
-            
-            // 4. 移除從 "**參考資料：**" 開始到文本結尾的內容（不管前面有沒有 ---）
-            answerText = answerText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-            answerText = answerText.replace(/\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
-            answerText = answerText.replace(/\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
-            
-            // 5. 移除從 "**引用資料：**" 開始到文本結尾的內容
-            answerText = answerText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
-            
-            // 8. 移除文本中的註腳編號 [1], [2], [3] 等，包括後面可能跟隨的其他字符
-            answerText = answerText.replace(/\[\d+\](\[\d+\])*/g, '');
-            
-            // 9. 清理可能產生的多餘空白和換行
-            answerText = answerText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
-            
-            console.log('🧹 清理後文本長度:', answerText.length);
-            console.log('🔍 清理後文本結尾預覽:', answerText.substring(answerText.length - 200));
-            
-            console.log('✅ 已統一移除文本中的註腳和參考資料列表，將在引用來源區塊統一顯示');
-            console.log('📊 清理後文本長度:', answerText.length, '引用來源數量:', references.length);
         }
+
+        // 無論是否有引用來源，都需要清理註腳編號，確保乾淨的閱讀體驗
+        console.log('🧹 開始統一文本清理...');
+        console.log('🔍 清理前文本長度:', answerText.length);
+        console.log('🔍 清理前文本結尾預覽:', answerText.substring(answerText.length - 200));
+
+        // 第一步：移除文本中的所有註腳編號 [1], [2], [3] 等（包括連續的如 [1][2]）
+        console.log('📝 清理註腳編號...');
+        const beforeFootnoteClean = answerText.length;
+        
+        // 移除所有註腳編號，包括連續的註腳
+        answerText = answerText.replace(/\[\d+\](\[\d+\])*/g, '');
+        
+        console.log(`✅ 註腳清理完成: 清理前 ${beforeFootnoteClean} 字元，清理後 ${answerText.length} 字元`);
+
+        // 第二步：移除參考資料列表部分（如果存在於文本末尾）
+        console.log('� 清理參考資料列表...');
+        const beforeRefClean = answerText.length;
+        
+        // 核心清理邏輯：直接截斷「參考資料：」字樣及其後的所有內容
+        answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/引用來源[：:][\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/參考來源[：:][\s\S]*$/m, '').trim();
+        
+        // 額外清理各種可能的格式變體，確保徹底移除
+        answerText = answerText.replace(/---\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\n\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\n\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\n\s*\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+        
+        if (beforeRefClean !== answerText.length) {
+            console.log(`✅ 移除參考資料列表: 清理前 ${beforeRefClean} 字元，清理後 ${answerText.length} 字元`);
+        } else {
+            console.log('ℹ️  未發現參考資料列表，無需清理');
+        }
+
+        // 第三步：清理可能產生的多餘空白和換行
+        answerText = answerText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+
+        console.log('🧹 清理後文本長度:', answerText.length);
+        console.log('🔍 清理後文本結尾預覽:', answerText.substring(answerText.length - 200));
+
+        // 記錄引用來源處理狀態
+        if (references.length === 0) {
+            console.log('ℹ️  沒有找到引用來源，文本已清理完成');
+        } else if (references.length >= 10) {
+            console.log(`� 引用來源數量 ${references.length} ≥ 10，將在專用區塊顯示`);
+        } else {
+            console.log(`📋 引用來源數量 ${references.length} < 10，將隱藏引用區塊`);
+        }
+
+        console.log('✅ 統一文本清理完成，註腳和參考資料列表已移除');
 
         console.log('=== 最終提取結果 ===');
         console.log('Thinking 內容:', thinkingText ? thinkingText.substring(0, 200) + '...' : '無');
