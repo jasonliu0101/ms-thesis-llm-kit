@@ -98,6 +98,9 @@ class ChatApp {
     }
 
     showWelcomeModal() {
+        // 強制清除之前的狀態進行測試
+        // sessionStorage.removeItem('hasSeenWelcome'); // 取消註解以重新顯示歡迎頁面
+        
         // 檢查是否已經顯示過歡迎頁面（可以使用 sessionStorage）
         const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
         console.log('🎯 檢查歡迎頁面狀態:', hasSeenWelcome);
@@ -109,6 +112,7 @@ class ChatApp {
             if (modal) {
                 // 顯示模態框
                 modal.style.display = 'flex';
+                modal.classList.remove('hidden'); // 確保移除 hidden 類
                 console.log('✅ 模態框已顯示');
                 
                 // 綁定開始按鈕事件
@@ -116,7 +120,13 @@ class ChatApp {
                 console.log('🔘 找到開始按鈕:', !!startButton);
                 
                 if (startButton) {
-                    startButton.addEventListener('click', () => {
+                    // 移除之前可能存在的事件監聽器
+                    startButton.replaceWith(startButton.cloneNode(true));
+                    const newStartButton = document.getElementById('startSystemBtn');
+                    
+                    newStartButton.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         console.log('🖱️ 開始按鈕被點擊');
                         this.hideWelcomeModal();
                     });
@@ -130,7 +140,11 @@ class ChatApp {
                         this.hideWelcomeModal();
                     }
                 });
+            } else {
+                console.error('❌ 找不到模態框元素 #researchWelcomeModal');
             }
+        } else {
+            console.log('ℹ️ 歡迎頁面已經顯示過，跳過');
         }
     }
 
@@ -1060,6 +1074,22 @@ function initializeApp() {
         console.log('正在初始化ChatApp...');
         window.chatApp = new ChatApp();
         console.log('ChatApp初始化成功');
+        
+        // 添加全域測試函數
+        window.resetWelcomeModal = function() {
+            sessionStorage.removeItem('hasSeenWelcome');
+            location.reload();
+        };
+        
+        window.showWelcomeModalNow = function() {
+            if (window.chatApp) {
+                sessionStorage.removeItem('hasSeenWelcome');
+                window.chatApp.showWelcomeModal();
+            }
+        };
+        
+        console.log('🔧 測試函數已添加: resetWelcomeModal(), showWelcomeModalNow()');
+        
     } catch (error) {
         console.error('ChatApp初始化失敗:', error);
         // 延遲重試
