@@ -1,5 +1,14 @@
 class ChatApp {
     constructor() {
+        // 生成會話 ID
+        this.sessionId = this.generateSessionId();
+        
+        // 跟蹤是否已顯示過識別碼
+        this.hasShownSessionId = false;
+        
+        // 檢查是否需要顯示歡迎頁面
+        this.showWelcomeModal();
+        
         // 設定 Worker URL - 部署後請更新此 URL
         // 部署說明請參考 README_DEPLOYMENT.md
         this.workerUrl = 'https://ai-qa-backend.jasonliu1563.workers.dev'; // 請替換為您的 Worker URL
@@ -8,11 +17,102 @@ class ChatApp {
         console.log('=== ChatApp 初始化 ===');
         console.log('設定的 Worker URL:', this.workerUrl);
         console.log('當前頁面位置:', window.location.href);
+        console.log('會話 ID:', this.sessionId);
         
         this.initializeElements();
         this.bindEvents();
         this.loadSavedSettings();
         this.autoResizeTextarea();
+    }
+
+    generateSessionId() {
+        // 生成時間戳和隨機字符串組合的會話 ID
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        return `session-${timestamp}-${randomStr}`;
+    }
+
+    generateSessionCode(data) {
+        // 第一位：判斷是否來自例題
+        let digit1 = '0'; // 預設不是例題
+        const lastUserMessage = this.getLastUserMessage();
+        if (lastUserMessage) {
+            // 檢查是否是例題
+            const exampleQuestions = [
+                "如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？", // 例題1
+                "鄰居的狗經常在夜間吠叫影響睡眠，我可以採取什麼法律行動？", // 例題2
+                "我在網路上購買商品但收到假貨，賣家拒絕退款怎麼辦？" // 例題3
+            ];
+            
+            for (let i = 0; i < exampleQuestions.length; i++) {
+                if (lastUserMessage.includes(exampleQuestions[i]) || exampleQuestions[i].includes(lastUserMessage)) {
+                    digit1 = (i + 1).toString();
+                    break;
+                }
+            }
+        }
+
+        // 第二位：判斷是否開啟思考流程
+        const digit2 = (this.showThinkingCheckbox.checked && data.thinking) ? '1' : '0';
+
+        // 第三、四位：引用數量（00-99）
+        const referenceCount = (data.references && data.references.length) ? data.references.length : 0;
+        const digits34 = referenceCount.toString().padStart(2, '0');
+
+        return digit1 + digit2 + digits34;
+    }
+
+    getLastUserMessage() {
+        // 獲取最後一個用戶訊息
+        const userMessages = this.chatContainer.querySelectorAll('.user-message');
+        if (userMessages.length > 0) {
+            const lastMessage = userMessages[userMessages.length - 1];
+            const messageContent = lastMessage.querySelector('.user-text');
+            return messageContent ? messageContent.textContent.trim() : '';
+        }
+        return '';
+    }
+
+    showWelcomeModal() {
+        // 檢查是否已經顯示過歡迎頁面（可以使用 sessionStorage）
+        const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
+        
+        if (!hasSeenWelcome) {
+            const modal = document.getElementById('researchWelcomeModal');
+            if (modal) {
+                // 顯示模態框
+                modal.style.display = 'flex';
+                
+                // 綁定開始按鈕事件
+                const startButton = document.getElementById('startSystemBtn');
+                if (startButton) {
+                    startButton.addEventListener('click', () => {
+                        this.hideWelcomeModal();
+                    });
+                }
+                
+                // 點擊背景關閉模態框
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        this.hideWelcomeModal();
+                    }
+                });
+            }
+        }
+    }
+
+    hideWelcomeModal() {
+        const modal = document.getElementById('researchWelcomeModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            // 標記已經看過歡迎頁面
+            sessionStorage.setItem('hasSeenWelcome', 'true');
+            
+            // 延遲移除以配合動畫
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
     }
 
     initializeElements() {
@@ -605,6 +705,21 @@ class ChatApp {
             `;
         }
 
+        // 生成四位數識別碼並顯示
+        const sessionCode = this.generateSessionCode(data);
+        responseHtml += `
+            <div class="session-code-section">
+                <div class="session-code-display">
+                    <i class="fas fa-id-card"></i>
+                    <span class="code-label">識別碼：</span>
+                    <span class="session-code-text">${sessionCode}</span>
+                    <button class="copy-code-btn" onclick="window.chatApp.copySessionCode('${sessionCode}')" title="複製識別碼">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
         responseHtml += `</div>`;
         messageDiv.innerHTML = responseHtml;
         
@@ -812,13 +927,100 @@ class ChatApp {
             console.error('載入設定時發生錯誤:', error);
         }
     }
+
+    copySessionIdInChat() {
+        const sessionId = this.sessionId;
+        
+        // 使用 Clipboard API 複製文字
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(sessionId).then(() => {
+                this.showCopyFeedback();
+            }).catch(err => {
+                console.error('複製失敗:', err);
+                this.fallbackCopyText(sessionId);
+            });
+        } else {
+            // 備用複製方法
+            this.fallbackCopyText(sessionId);
+        }
+    }
+
+    copySessionCode(code) {
+        // 使用 Clipboard API 複製識別碼
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(code).then(() => {
+                this.showCodeCopyFeedback();
+            }).catch(err => {
+                console.error('複製失敗:', err);
+                this.fallbackCopyText(code);
+            });
+        } else {
+            // 備用複製方法
+            this.fallbackCopyText(code);
+        }
+    }
+
+    fallbackCopyText(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            this.showCopyFeedback();
+        } catch (err) {
+            console.error('複製失敗:', err);
+        } finally {
+            document.body.removeChild(textArea);
+        }
+    }
+
+    showCopyFeedback() {
+        // 顯示複製成功的反饋
+        const button = document.querySelector('.copy-session-btn');
+        if (button) {
+            const originalIcon = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            button.style.color = '#4caf50';
+            
+            setTimeout(() => {
+                button.innerHTML = originalIcon;
+                button.style.color = '';
+            }, 2000);
+        }
+        
+        // 也可以顯示 toast 消息
+        console.log('✅ 識別碼已複製到剪貼板');
+    }
+
+    showCodeCopyFeedback() {
+        // 顯示識別碼複製成功的反饋
+        const button = document.querySelector('.copy-code-btn');
+        if (button) {
+            const originalIcon = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            button.style.backgroundColor = '#4caf50';
+            
+            setTimeout(() => {
+                button.innerHTML = originalIcon;
+                button.style.backgroundColor = '';
+            }, 2000);
+        }
+        
+        console.log('✅ 識別碼已複製到剪貼板');
+    }
 }
 
 // 確保DOM完全加載後再初始化應用
 function initializeApp() {
     try {
         console.log('正在初始化ChatApp...');
-        new ChatApp();
+        window.chatApp = new ChatApp();
         console.log('ChatApp初始化成功');
     } catch (error) {
         console.error('ChatApp初始化失敗:', error);
@@ -826,7 +1028,7 @@ function initializeApp() {
         setTimeout(() => {
             console.log('嘗試重新初始化ChatApp...');
             try {
-                new ChatApp();
+                window.chatApp = new ChatApp();
                 console.log('ChatApp重新初始化成功');
             } catch (retryError) {
                 console.error('ChatApp重新初始化也失敗:', retryError);

@@ -1,5 +1,14 @@
 class ChatApp {
     constructor() {
+        // 生成會話 ID
+        this.sessionId = this.generateSessionId();
+        
+        // 跟蹤是否已顯示過識別碼
+        this.hasShownSessionId = false;
+        
+        // 檢查是否需要顯示歡迎頁面
+        this.showWelcomeModal();
+        
         // 檢查是否使用 Worker 模式
         // 可以通過 URL 參數、環境變數或設定來決定
         this.workerUrl = this.detectWorkerUrl();
@@ -11,11 +20,127 @@ class ChatApp {
         console.log('=== ChatApp 初始化 ===');
         console.log('Worker URL:', this.workerUrl || '未設定（使用直接 API 模式）');
         console.log('當前頁面位置:', window.location.href);
+        console.log('會話 ID:', this.sessionId);
         
         this.initializeElements();
         this.bindEvents();
         this.loadSavedSettings();
         this.updateCharacterCount();
+    }
+
+    generateSessionId() {
+        // 生成時間戳和隨機字符串組合的會話 ID
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        return `session-${timestamp}-${randomStr}`;
+    }
+
+    showWelcomeModal() {
+        // 檢查是否已經顯示過歡迎頁面（可以使用 sessionStorage）
+        const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
+        
+        if (!hasSeenWelcome) {
+            const modal = document.getElementById('researchWelcomeModal');
+            if (modal) {
+                // 顯示模態框
+                modal.style.display = 'flex';
+                
+                // 綁定開始按鈕事件
+                const startButton = document.getElementById('startSystemBtn');
+                if (startButton) {
+                    startButton.addEventListener('click', () => {
+                        this.hideWelcomeModal();
+                    });
+                }
+                
+                // 點擊背景關閉模態框
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        this.hideWelcomeModal();
+                    }
+                });
+            }
+        }
+    }
+
+    hideWelcomeModal() {
+        const modal = document.getElementById('researchWelcomeModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            // 標記已經看過歡迎頁面
+            sessionStorage.setItem('hasSeenWelcome', 'true');
+            
+            // 延遲移除以配合動畫
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    copySessionId() {
+        const sessionId = this.sessionId;
+        const copyButton = document.getElementById('copySessionId');
+        
+        // 使用 Clipboard API 複製文字
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(sessionId).then(() => {
+                this.showCopyFeedback(copyButton);
+            }).catch(err => {
+                console.error('複製失敗:', err);
+                this.fallbackCopyText(sessionId, copyButton);
+            });
+        } else {
+            // 備用複製方法
+            this.fallbackCopyText(sessionId, copyButton);
+        }
+    }
+
+    copySessionIdInChat(button) {
+        const sessionId = this.sessionId;
+        
+        // 使用 Clipboard API 複製文字
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(sessionId).then(() => {
+                this.showCopyFeedback(button);
+            }).catch(err => {
+                console.error('複製失敗:', err);
+                this.fallbackCopyText(sessionId, button);
+            });
+        } else {
+            // 備用複製方法
+            this.fallbackCopyText(sessionId, button);
+        }
+    }
+
+    fallbackCopyText(text, button) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            this.showCopyFeedback(button);
+        } catch (err) {
+            console.error('備用複製也失敗:', err);
+        } finally {
+            document.body.removeChild(textArea);
+        }
+    }
+
+    showCopyFeedback(button) {
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i>';
+        button.style.background = '#4caf50';
+        
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.style.background = '';
+        }, 1500);
     }
 
     detectWorkerUrl() {
@@ -1040,6 +1165,37 @@ class ChatApp {
             console.log('❌ 不顯示引用來源區塊，原因:', reason);
         }
 
+        // 第一次回覆後顯示識別碼
+        if (!this.hasShownSessionId) {
+            responseHtml += `
+                <div class="session-id-display">
+                    <div class="session-id-header">
+                        <i class="fas fa-id-card"></i>
+                        <span>研究識別碼</span>
+                    </div>
+                    <div class="session-id-content">
+                        <div class="session-id-value">
+                            <span class="session-id-text">${this.sessionId}</span>
+                            <button class="copy-session-btn" onclick="window.chatApp.copySessionIdInChat(this)" title="複製識別碼">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <p class="session-id-note">
+                            <i class="fas fa-info-circle"></i>
+                            請記下此識別碼，用於問卷填寫和後續追蹤
+                        </p>
+                    </div>
+                </div>
+            `;
+            this.hasShownSessionId = true;
+            
+            // 更新歡迎訊息中的識別碼顯示
+            const displaySessionId = document.getElementById('displaySessionId');
+            if (displaySessionId) {
+                displaySessionId.textContent = this.sessionId;
+            }
+        }
+
         responseHtml += `</div>`;
         messageDiv.innerHTML = responseHtml;
         
@@ -1242,5 +1398,5 @@ class ChatApp {
 
 // 初始化應用
 document.addEventListener('DOMContentLoaded', () => {
-    new ChatApp();
+    window.chatApp = new ChatApp();
 });
