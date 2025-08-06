@@ -52,14 +52,20 @@ class ChatApp {
             }
         }
 
-        // 第二位：判斷是否開啟思考流程
-        const digit2 = (this.showThinkingCheckbox.checked && data.thinking) ? '1' : '0';
+        // 第二位：0到9隨機
+        const digit2 = Math.floor(Math.random() * 10).toString();
 
-        // 第三、四位：引用數量（00-99）
+        // 第三位：判斷是否開啟思考流程
+        const digit3 = (this.showThinkingCheckbox.checked && data.thinking) ? '1' : '0';
+
+        // 第四位：0到9隨機
+        const digit4 = Math.floor(Math.random() * 10).toString();
+
+        // 第五、六位：引用數量（00-99）
         const referenceCount = (data.references && data.references.length) ? data.references.length : 0;
-        const digits34 = referenceCount.toString().padStart(2, '0');
+        const digits56 = referenceCount.toString().padStart(2, '0');
 
-        return digit1 + digit2 + digits34;
+        return digit1 + digit2 + digit3 + digit4 + digits56;
     }
 
     getLastUserMessage() {
