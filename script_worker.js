@@ -36,6 +36,8 @@ class ChatApp {
         // 第一位：判斷是否來自例題
         let digit1 = '0'; // 預設不是例題
         const lastUserMessage = this.getLastUserMessage();
+        console.log('🔍 檢測例題 - 最後用戶訊息:', lastUserMessage);
+        
         if (lastUserMessage) {
             // 檢查是否是例題
             const exampleQuestions = [
@@ -47,6 +49,7 @@ class ChatApp {
             for (let i = 0; i < exampleQuestions.length; i++) {
                 if (lastUserMessage.includes(exampleQuestions[i]) || exampleQuestions[i].includes(lastUserMessage)) {
                     digit1 = (i + 1).toString();
+                    console.log(`✅ 檢測到例題 ${i + 1}: ${exampleQuestions[i]}`);
                     break;
                 }
             }
@@ -57,6 +60,11 @@ class ChatApp {
 
         // 第三位：判斷是否開啟思考流程
         const digit3 = (this.showThinkingCheckbox.checked && data.thinking) ? '1' : '0';
+        console.log('🧠 思考流程狀態:', {
+            checked: this.showThinkingCheckbox.checked,
+            hasThinking: !!data.thinking,
+            digit3: digit3
+        });
 
         // 第四位：0到9隨機
         const digit4 = Math.floor(Math.random() * 10).toString();
@@ -64,8 +72,18 @@ class ChatApp {
         // 第五、六位：引用數量（00-99）
         const referenceCount = (data.references && data.references.length) ? data.references.length : 0;
         const digits56 = referenceCount.toString().padStart(2, '0');
+        console.log('📚 引用數量:', referenceCount);
 
-        return digit1 + digit2 + digit3 + digit4 + digits56;
+        const sessionCode = digit1 + digit2 + digit3 + digit4 + digits56;
+        console.log('🔢 生成識別碼:', sessionCode, {
+            例題: digit1,
+            隨機1: digit2, 
+            思考: digit3,
+            隨機2: digit4,
+            引用: digits56
+        });
+
+        return sessionCode;
     }
 
     getLastUserMessage() {
@@ -73,7 +91,7 @@ class ChatApp {
         const userMessages = this.chatContainer.querySelectorAll('.user-message');
         if (userMessages.length > 0) {
             const lastMessage = userMessages[userMessages.length - 1];
-            const messageContent = lastMessage.querySelector('.user-text');
+            const messageContent = lastMessage.querySelector('.message-text');
             return messageContent ? messageContent.textContent.trim() : '';
         }
         return '';
