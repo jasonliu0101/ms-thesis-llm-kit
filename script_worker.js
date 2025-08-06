@@ -100,24 +100,33 @@ class ChatApp {
     showWelcomeModal() {
         // 檢查是否已經顯示過歡迎頁面（可以使用 sessionStorage）
         const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
+        console.log('🎯 檢查歡迎頁面狀態:', hasSeenWelcome);
         
         if (!hasSeenWelcome) {
             const modal = document.getElementById('researchWelcomeModal');
+            console.log('🎭 找到模態框元素:', !!modal);
+            
             if (modal) {
                 // 顯示模態框
                 modal.style.display = 'flex';
+                console.log('✅ 模態框已顯示');
                 
                 // 綁定開始按鈕事件
                 const startButton = document.getElementById('startSystemBtn');
+                console.log('🔘 找到開始按鈕:', !!startButton);
+                
                 if (startButton) {
                     startButton.addEventListener('click', () => {
+                        console.log('🖱️ 開始按鈕被點擊');
                         this.hideWelcomeModal();
                     });
+                    console.log('✅ 開始按鈕事件已綁定');
                 }
                 
                 // 點擊背景關閉模態框
                 modal.addEventListener('click', (e) => {
                     if (e.target === modal) {
+                        console.log('🖱️ 背景被點擊，關閉模態框');
                         this.hideWelcomeModal();
                     }
                 });
@@ -126,15 +135,20 @@ class ChatApp {
     }
 
     hideWelcomeModal() {
+        console.log('🚪 開始關閉歡迎頁面');
         const modal = document.getElementById('researchWelcomeModal');
         if (modal) {
             modal.classList.add('hidden');
+            console.log('✅ 添加 hidden 類');
+            
             // 標記已經看過歡迎頁面
             sessionStorage.setItem('hasSeenWelcome', 'true');
+            console.log('✅ 設定 sessionStorage');
             
             // 延遲移除以配合動畫
             setTimeout(() => {
                 modal.style.display = 'none';
+                console.log('✅ 模態框已隱藏');
             }, 300);
         }
     }
