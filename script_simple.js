@@ -36,6 +36,8 @@ class ChatApp {
         // 第一位：判斷是否來自例題
         let digit1 = '0'; // 預設不是例題
         const lastUserMessage = this.getLastUserMessage();
+        console.log('🔍 檢測例題 - 最後用戶訊息:', lastUserMessage);
+        
         if (lastUserMessage) {
             // 檢查是否是例題
             const exampleQuestions = [
@@ -47,6 +49,7 @@ class ChatApp {
             for (let i = 0; i < exampleQuestions.length; i++) {
                 if (lastUserMessage.includes(exampleQuestions[i]) || exampleQuestions[i].includes(lastUserMessage)) {
                     digit1 = (i + 1).toString();
+                    console.log(`✅ 檢測到例題 ${i + 1}: ${exampleQuestions[i]}`);
                     break;
                 }
             }
@@ -56,7 +59,13 @@ class ChatApp {
         const digit2 = Math.floor(Math.random() * 10).toString();
 
         // 第三位：判斷是否開啟思考流程
-        const digit3 = (this.showThinkingCheckbox.checked && data.thinking) ? '1' : '0';
+        // 簡潔版：API 總是調用思考流程，但 UI 顯示狀態為關閉
+        const digit3 = (data.thinking) ? '1' : '0'; // 基於實際 API 回應而非 UI 狀態
+        console.log('🧠 思考流程狀態 (簡潔版):', {
+            uiChecked: this.showThinkingCheckbox.checked, // UI 顯示為關閉
+            apiHasThinking: !!data.thinking, // API 實際有思考流程
+            digit3: digit3 // 基於 API 實際回應
+        });
 
         // 第四位：0到9隨機
         const digit4 = Math.floor(Math.random() * 10).toString();
@@ -64,8 +73,18 @@ class ChatApp {
         // 第五、六位：引用數量（00-99）
         const referenceCount = (data.references && data.references.length) ? data.references.length : 0;
         const digits56 = referenceCount.toString().padStart(2, '0');
+        console.log('📚 引用數量:', referenceCount);
 
-        return digit1 + digit2 + digit3 + digit4 + digits56;
+        const sessionCode = digit1 + digit2 + digit3 + digit4 + digits56;
+        console.log('🔢 生成識別碼:', sessionCode, {
+            例題: digit1,
+            隨機1: digit2, 
+            思考: digit3,
+            隨機2: digit4,
+            引用: digits56
+        });
+
+        return sessionCode;
     }
 
     getLastUserMessage() {
@@ -73,51 +92,88 @@ class ChatApp {
         const userMessages = this.chatContainer.querySelectorAll('.user-message');
         if (userMessages.length > 0) {
             const lastMessage = userMessages[userMessages.length - 1];
-            const messageContent = lastMessage.querySelector('.user-text');
+            const messageContent = lastMessage.querySelector('.message-text');
             return messageContent ? messageContent.textContent.trim() : '';
         }
         return '';
     }
 
     showWelcomeModal() {
-        // 檢查是否已經顯示過歡迎頁面（可以使用 sessionStorage）
-        const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
+        // 強制清除之前的狀態進行測試
+        // sessionStorage.removeItem('hasSeenWelcome'); // 取消註解以重新顯示歡迎頁面
         
-        if (!hasSeenWelcome) {
-            const modal = document.getElementById('researchWelcomeModal');
-            if (modal) {
-                // 顯示模態框
-                modal.style.display = 'flex';
+        const modal = document.getElementById('researchWelcomeModal');
+        console.log('🎭 找到模態框元素:', !!modal);
+        
+        if (modal) {
+            // 顯示模態框
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden'); // 確保移除 hidden 類
+            console.log('✅ 模態框已顯示');
+            
+            // 清除並重新綁定開始按鈕事件
+            const startButton = document.getElementById('startSystemBtn');
+            console.log('🔘 找到開始按鈕:', !!startButton);
+            
+            if (startButton) {
+                // 移除之前可能存在的事件監聽器
+                startButton.replaceWith(startButton.cloneNode(true));
+                const newStartButton = document.getElementById('startSystemBtn');
                 
-                // 綁定開始按鈕事件
-                const startButton = document.getElementById('startSystemBtn');
-                if (startButton) {
-                    startButton.addEventListener('click', () => {
-                        this.hideWelcomeModal();
-                    });
+                newStartButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🖱️ 開始按鈕被點擊');
+                    this.hideWelcomeModal();
+                });
+                console.log('✅ 開始按鈕事件已綁定');
+            }
+            
+            // 清除並重新綁定背景點擊事件
+            const newModal = document.getElementById('researchWelcomeModal');
+            newModal.replaceWith(newModal.cloneNode(true));
+            const refreshedModal = document.getElementById('researchWelcomeModal');
+            
+            refreshedModal.addEventListener('click', (e) => {
+                if (e.target === refreshedModal) {
+                    console.log('🖱️ 背景被點擊，關閉模態框');
+                    this.hideWelcomeModal();
                 }
-                
-                // 點擊背景關閉模態框
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        this.hideWelcomeModal();
-                    }
+            });
+            
+            // 重新綁定開始按鈕（因為 modal 被重新創建）
+            const finalStartButton = document.getElementById('startSystemBtn');
+            if (finalStartButton) {
+                finalStartButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🖱️ 開始按鈕被點擊（最終版本）');
+                    this.hideWelcomeModal();
                 });
             }
+        } else {
+            console.error('❌ 找不到模態框元素 #researchWelcomeModal');
         }
     }
 
     hideWelcomeModal() {
+        console.log('🚪 開始關閉歡迎頁面');
         const modal = document.getElementById('researchWelcomeModal');
         if (modal) {
             modal.classList.add('hidden');
-            // 標記已經看過歡迎頁面
+            console.log('✅ 添加 hidden 類');
+            
+            // 標記已經看過歡迎頁面（但允許重新顯示）
             sessionStorage.setItem('hasSeenWelcome', 'true');
+            console.log('✅ 設定 sessionStorage');
             
             // 延遲移除以配合動畫
             setTimeout(() => {
                 modal.style.display = 'none';
+                console.log('✅ 模態框已隱藏');
             }, 300);
+        } else {
+            console.error('❌ 找不到模態框元素進行關閉');
         }
     }
 
@@ -330,7 +386,8 @@ class ChatApp {
         const requestBody = {
             question: question,
             enableSearch: this.enableSearchCheckbox ? this.enableSearchCheckbox.checked : true,
-            showThinking: this.showThinkingCheckbox ? this.showThinkingCheckbox.checked : true
+            // 簡潔版：強制請求思考流程以確保品質一致，但不在 UI 中顯示
+            showThinking: true
         };
 
         console.log('請求體:', JSON.stringify(requestBody, null, 2));
@@ -662,8 +719,9 @@ class ChatApp {
         console.log('顯示思考流程:', this.showThinkingCheckbox.checked);
         console.log('顯示引用來源:', this.showReferencesCheckbox.checked);
 
-        // 顯示思考流程（如果啟用且有內容）
-        if (this.showThinkingCheckbox.checked && data.thinking) {
+        // 簡潔版：永遠不顯示思考流程，即使 API 回傳了思考內容
+        // 原本的條件: if (this.showThinkingCheckbox.checked && data.thinking)
+        if (false) { // 簡潔版強制不顯示思考流程
             responseHtml += `
                 <div class="thinking-section">
                     <div class="thinking-header">
@@ -720,7 +778,8 @@ class ChatApp {
                     <span class="code-label">識別碼：</span>
                     <span class="session-code-text">${sessionCode}</span>
                     <button class="copy-code-btn" onclick="window.chatApp.copySessionCode('${sessionCode}')" title="複製識別碼">
-                        <i class="fas fa-copy"></i>
+                        <i class="fas fa-copy" aria-hidden="true"></i>
+                        <span class="sr-only">複製</span>
                     </button>
                 </div>
             </div>
@@ -910,7 +969,8 @@ class ChatApp {
     saveSettings() {
         const settings = {
             showReferences: this.showReferencesCheckbox.checked,
-            showThinking: this.showThinkingCheckbox.checked,
+            // 簡潔版：UI 顯示為關閉，但不影響實際 API 調用行為
+            showThinking: false, // 簡潔版固定為 false
             enableSearch: this.enableSearchCheckbox ? this.enableSearchCheckbox.checked : true
         };
         
@@ -923,7 +983,8 @@ class ChatApp {
             if (savedSettings) {
                 const settings = JSON.parse(savedSettings);
                 this.showReferencesCheckbox.checked = settings.showReferences !== false;
-                this.showThinkingCheckbox.checked = settings.showThinking !== false;
+                // 簡潔版：強制設定思考流程為不顯示，但依然會調用 API
+                this.showThinkingCheckbox.checked = false;
                 
                 if (this.enableSearchCheckbox) {
                     this.enableSearchCheckbox.checked = settings.enableSearch !== false;
@@ -1028,6 +1089,25 @@ function initializeApp() {
         console.log('正在初始化ChatApp...');
         window.chatApp = new ChatApp();
         console.log('ChatApp初始化成功');
+        
+        // 添加全域測試函數
+        window.resetWelcomeModal = function() {
+            sessionStorage.removeItem('hasSeenWelcome');
+            location.reload();
+        };
+        
+        window.showWelcomeModalNow = function() {
+            if (window.chatApp) {
+                console.log('🔧 手動顯示歡迎模態框');
+                // 不需要清除 sessionStorage，直接顯示
+                window.chatApp.showWelcomeModal();
+            } else {
+                console.error('❌ ChatApp 尚未初始化');
+            }
+        };
+        
+        console.log('🔧 測試函數已添加: resetWelcomeModal(), showWelcomeModalNow()');
+        
     } catch (error) {
         console.error('ChatApp初始化失敗:', error);
         // 延遲重試

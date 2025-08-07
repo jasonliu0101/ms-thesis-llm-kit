@@ -1,0 +1,1 @@
+sessionStorage.clear(); location.reload();
