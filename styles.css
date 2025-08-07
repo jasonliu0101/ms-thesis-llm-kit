@@ -2190,6 +2190,21 @@ sup {
     line-height: 1.5;
 }
 
+.step-hint {
+    background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
+    border-left: 3px solid #667eea;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 8px !important;
+    color: #4a5568 !important;
+    font-size: 0.85em !important;
+}
+
+.step-hint i {
+    color: #667eea;
+    margin-right: 6px;
+}
+
 .session-info {
     background: linear-gradient(135deg, #fff3e0 0%, #f3e5f5 100%);
     border: 2px solid #ffcc02;
@@ -2343,6 +2358,42 @@ sup {
     justify-content: center;
     min-width: 28px;
     height: 24px;
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    position: relative;
+}
+
+.copy-code-btn i {
+    font-size: 12px;
+    line-height: 1;
+    display: inline-block;
+    font-weight: 900; /* 確保 Font Awesome solid 圖示顯示 */
+    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free';
+}
+
+/* 確保 Font Awesome 圖示正確顯示 */
+.copy-code-btn .fa-copy::before {
+    content: "\f0c5";
+    font-weight: 900;
+}
+
+/* 備用顯示 - 如果圖示無法載入 */
+.copy-code-btn:empty::after,
+.copy-code-btn i:empty::after {
+    content: "📋";
+    font-size: 12px;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .copy-code-btn:hover {
