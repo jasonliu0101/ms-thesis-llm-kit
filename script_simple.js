@@ -59,12 +59,13 @@ class ChatApp {
         const digit2 = Math.floor(Math.random() * 10).toString();
 
         // 第三位：判斷是否開啟思考流程
-        // 簡潔版：API 總是調用思考流程，但 UI 顯示狀態為關閉
-        const digit3 = (data.thinking) ? '1' : '0'; // 基於實際 API 回應而非 UI 狀態
+        // 簡潔版：識別碼應基於實際顯示狀態，而非 API 調用狀態
+        const digit3 = (this.showThinkingCheckbox.checked && data.thinking) ? '1' : '0';
         console.log('🧠 思考流程狀態 (簡潔版):', {
-            uiChecked: this.showThinkingCheckbox.checked, // UI 顯示為關閉
+            uiChecked: this.showThinkingCheckbox.checked, // UI 顯示狀態（簡潔版固定為 false）
             apiHasThinking: !!data.thinking, // API 實際有思考流程
-            digit3: digit3 // 基於 API 實際回應
+            actuallyDisplayed: this.showThinkingCheckbox.checked && data.thinking, // 實際是否顯示
+            digit3: digit3 // 基於實際顯示狀態
         });
 
         // 第四位：0到9隨機
