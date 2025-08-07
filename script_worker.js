@@ -101,50 +101,57 @@ class ChatApp {
         // 強制清除之前的狀態進行測試
         // sessionStorage.removeItem('hasSeenWelcome'); // 取消註解以重新顯示歡迎頁面
         
-        // 檢查是否已經顯示過歡迎頁面（可以使用 sessionStorage）
-        const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
-        console.log('🎯 檢查歡迎頁面狀態:', hasSeenWelcome);
+        const modal = document.getElementById('researchWelcomeModal');
+        console.log('🎭 找到模態框元素:', !!modal);
         
-        if (!hasSeenWelcome) {
-            const modal = document.getElementById('researchWelcomeModal');
-            console.log('🎭 找到模態框元素:', !!modal);
+        if (modal) {
+            // 顯示模態框
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden'); // 確保移除 hidden 類
+            console.log('✅ 模態框已顯示');
             
-            if (modal) {
-                // 顯示模態框
-                modal.style.display = 'flex';
-                modal.classList.remove('hidden'); // 確保移除 hidden 類
-                console.log('✅ 模態框已顯示');
+            // 清除並重新綁定開始按鈕事件
+            const startButton = document.getElementById('startSystemBtn');
+            console.log('🔘 找到開始按鈕:', !!startButton);
+            
+            if (startButton) {
+                // 移除之前可能存在的事件監聽器
+                startButton.replaceWith(startButton.cloneNode(true));
+                const newStartButton = document.getElementById('startSystemBtn');
                 
-                // 綁定開始按鈕事件
-                const startButton = document.getElementById('startSystemBtn');
-                console.log('🔘 找到開始按鈕:', !!startButton);
-                
-                if (startButton) {
-                    // 移除之前可能存在的事件監聽器
-                    startButton.replaceWith(startButton.cloneNode(true));
-                    const newStartButton = document.getElementById('startSystemBtn');
-                    
-                    newStartButton.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('🖱️ 開始按鈕被點擊');
-                        this.hideWelcomeModal();
-                    });
-                    console.log('✅ 開始按鈕事件已綁定');
-                }
-                
-                // 點擊背景關閉模態框
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        console.log('🖱️ 背景被點擊，關閉模態框');
-                        this.hideWelcomeModal();
-                    }
+                newStartButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🖱️ 開始按鈕被點擊');
+                    this.hideWelcomeModal();
                 });
-            } else {
-                console.error('❌ 找不到模態框元素 #researchWelcomeModal');
+                console.log('✅ 開始按鈕事件已綁定');
+            }
+            
+            // 清除並重新綁定背景點擊事件
+            const newModal = document.getElementById('researchWelcomeModal');
+            newModal.replaceWith(newModal.cloneNode(true));
+            const refreshedModal = document.getElementById('researchWelcomeModal');
+            
+            refreshedModal.addEventListener('click', (e) => {
+                if (e.target === refreshedModal) {
+                    console.log('🖱️ 背景被點擊，關閉模態框');
+                    this.hideWelcomeModal();
+                }
+            });
+            
+            // 重新綁定開始按鈕（因為 modal 被重新創建）
+            const finalStartButton = document.getElementById('startSystemBtn');
+            if (finalStartButton) {
+                finalStartButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🖱️ 開始按鈕被點擊（最終版本）');
+                    this.hideWelcomeModal();
+                });
             }
         } else {
-            console.log('ℹ️ 歡迎頁面已經顯示過，跳過');
+            console.error('❌ 找不到模態框元素 #researchWelcomeModal');
         }
     }
 
@@ -155,7 +162,7 @@ class ChatApp {
             modal.classList.add('hidden');
             console.log('✅ 添加 hidden 類');
             
-            // 標記已經看過歡迎頁面
+            // 標記已經看過歡迎頁面（但允許重新顯示）
             sessionStorage.setItem('hasSeenWelcome', 'true');
             console.log('✅ 設定 sessionStorage');
             
@@ -164,6 +171,8 @@ class ChatApp {
                 modal.style.display = 'none';
                 console.log('✅ 模態框已隱藏');
             }, 300);
+        } else {
+            console.error('❌ 找不到模態框元素進行關閉');
         }
     }
 
@@ -766,7 +775,8 @@ class ChatApp {
                     <span class="code-label">識別碼：</span>
                     <span class="session-code-text">${sessionCode}</span>
                     <button class="copy-code-btn" onclick="window.chatApp.copySessionCode('${sessionCode}')" title="複製識別碼">
-                        <i class="fas fa-copy"></i>
+                        <i class="fas fa-copy" aria-hidden="true"></i>
+                        <span class="sr-only">複製</span>
                     </button>
                 </div>
             </div>
@@ -1083,8 +1093,11 @@ function initializeApp() {
         
         window.showWelcomeModalNow = function() {
             if (window.chatApp) {
-                sessionStorage.removeItem('hasSeenWelcome');
+                console.log('🔧 手動顯示歡迎模態框');
+                // 不需要清除 sessionStorage，直接顯示
                 window.chatApp.showWelcomeModal();
+            } else {
+                console.error('❌ ChatApp 尚未初始化');
             }
         };
         
