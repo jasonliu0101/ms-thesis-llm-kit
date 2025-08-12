@@ -158,6 +158,49 @@ class ChatApp {
         }
     }
 
+    // Azure Translator 翻譯方法
+    async translateToTraditionalChinese(text) {
+        if (!text || !text.trim()) {
+            return text;
+        }
+
+        try {
+            console.log('🌏 開始翻譯思考流程到繁體中文...');
+            console.log('原文長度:', text.length);
+            
+            const response = await fetch(`${this.workerUrl}/translate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text,
+                    from: 'en',
+                    to: 'zh-Hant'
+                })
+            });
+
+            if (!response.ok) {
+                console.error('❌ 翻譯 API 回應錯誤:', response.status, response.statusText);
+                return text; // 如果翻譯失敗，返回原文
+            }
+
+            const result = await response.json();
+            
+            if (result.translatedText) {
+                console.log('✅ 翻譯成功');
+                console.log('譯文長度:', result.translatedText.length);
+                return result.translatedText;
+            } else {
+                console.error('❌ 翻譯回應格式錯誤:', result);
+                return text;
+            }
+        } catch (error) {
+            console.error('❌ 翻譯過程發生錯誤:', error);
+            return text; // 如果翻譯失敗，返回原文
+        }
+    }
+
     initializeElements() {
         // Checkbox elements
         this.showReferencesCheckbox = document.getElementById('showReferences');
@@ -335,7 +378,7 @@ class ChatApp {
             }
 
             // 處理並顯示回應
-            this.processAndDisplayResponse(response, question);
+            await this.processAndDisplayResponse(response, question);
             
             // 隱藏載入中覆蓋層
             this.hideLoading();
@@ -459,7 +502,7 @@ class ChatApp {
         }
     }
 
-    processAndDisplayResponse(response, originalQuestion) {
+    async processAndDisplayResponse(response, originalQuestion) {
         // 檢查是否為雙重回應格式
         if (response.isDualMode) {
             console.log('=== 處理雙重回應模式 ===');
@@ -505,15 +548,15 @@ class ChatApp {
             this.extractAndEnhanceThinking(mainResponse, thinkingSource);
             
             // 使用主要回應進行顯示
-            this.processSingleResponse(mainResponse, originalQuestion);
+            await this.processSingleResponse(mainResponse, originalQuestion);
             
         } else {
             // 單一回應模式
-            this.processSingleResponse(response, originalQuestion);
+            await this.processSingleResponse(response, originalQuestion);
         }
     }
 
-    processSingleResponse(response, originalQuestion) {
+    async processSingleResponse(response, originalQuestion) {
         if (!response.candidates || response.candidates.length === 0) {
             this.addErrorMessage('API 回應中沒有找到候選答案');
             return;
@@ -587,7 +630,7 @@ class ChatApp {
         console.log('顯示引用來源:', this.showReferencesCheckbox.checked);
 
         // 顯示回應
-        this.addAIResponse({
+        await this.addAIResponse({
             answer: answerText.trim() || '無法生成回應',
             thinking: thinkingText.trim(),
             references: references,
@@ -678,9 +721,16 @@ class ChatApp {
         this.scrollToBottom();
     }
 
-    addAIResponse(data) {
+    async addAIResponse(data) {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message ai-message';
+        
+        // 如果需要顯示思考流程且有內容，先進行翻譯
+        let translatedThinking = data.thinking;
+        if (this.showThinkingCheckbox.checked && data.thinking) {
+            console.log('🌏 正在翻譯思考流程...');
+            translatedThinking = await this.translateToTraditionalChinese(data.thinking);
+        }
         
         let responseHtml = `
             <div class="message-content">
@@ -699,8 +749,8 @@ class ChatApp {
         console.log('顯示思考流程:', this.showThinkingCheckbox.checked);
         console.log('顯示引用來源:', this.showReferencesCheckbox.checked);
 
-        // 顯示思考流程（如果啟用且有內容）
-        if (this.showThinkingCheckbox.checked && data.thinking) {
+        // 顯示思考流程（如果啟用且有內容）- 使用翻譯後的內容
+        if (this.showThinkingCheckbox.checked && translatedThinking) {
             responseHtml += `
                 <div class="thinking-section">
                     <div class="thinking-header">
@@ -711,7 +761,7 @@ class ChatApp {
                         </button>
                     </div>
                     <div class="thinking-content">
-                        ${this.formatThinking(data.thinking)}
+                        ${this.formatThinking(translatedThinking)}
                     </div>
                 </div>
             `;

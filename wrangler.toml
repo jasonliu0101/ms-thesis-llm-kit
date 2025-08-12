@@ -6,10 +6,14 @@ compatibility_date = "2024-01-01"
 [env.production.vars]
 # 在 Cloudflare Dashboard 中設定這些環境變數
 # GEMINI_API_KEY = "your-gemini-api-key-here"
+# AZURE_TRANSLATOR_KEY = "your-azure-translator-key-here"
+# AZURE_TRANSLATOR_REGION = "eastasia"
 
 # 開發環境設定
 [env.development.vars]
 # GEMINI_API_KEY = "your-dev-gemini-api-key-here"
+# AZURE_TRANSLATOR_KEY = "your-dev-azure-translator-key-here"
+# AZURE_TRANSLATOR_REGION = "eastasia"
 
 # 自定義域名設定（可選）
 # [[env.production.routes]]
