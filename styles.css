@@ -2356,10 +2356,11 @@ sup {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 28px;
+    min-width: auto; /* 允許按鈕根據內容調整寬度 */
     height: 24px;
     font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     position: relative;
+    white-space: nowrap; /* 防止文字換行 */
 }
 
 .copy-code-btn i {
@@ -2368,6 +2369,14 @@ sup {
     display: inline-block;
     font-weight: 900; /* 確保 Font Awesome solid 圖示顯示 */
     font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free';
+    margin-right: 4px; /* 圖示和文字之間的間距 */
+}
+
+.copy-code-btn .copy-btn-text {
+    font-size: 12px;
+    line-height: 1;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: normal;
 }
 
 /* 確保 Font Awesome 圖示正確顯示 */

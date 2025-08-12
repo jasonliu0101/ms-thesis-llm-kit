@@ -757,7 +757,8 @@ class ChatApp {
                     <span class="code-label">識別碼：</span>
                     <span class="session-code-text">${sessionCode}</span>
                     <button class="copy-code-btn" onclick="window.chatApp.copySessionCode('${sessionCode}')" title="複製識別碼">
-                        <i class="fas fa-copy"></i>
+                        <i class="fas fa-copy" aria-hidden="true"></i>
+                        <span class="copy-btn-text">複製識別碼</span>
                     </button>
                 </div>
             </div>
