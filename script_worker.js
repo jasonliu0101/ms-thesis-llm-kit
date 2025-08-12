@@ -35,8 +35,8 @@ class ChatApp {
     generateSessionCode(data) {
         // 第一位：判斷是否來自例題
         let digit1 = '0'; // 預設不是例題
-        const lastUserMessage = this.getLastUserMessage();
-        if (lastUserMessage) {
+        const currentQuestion = data.originalQuestion || '';
+        if (currentQuestion) {
             // 檢查是否是例題
             const exampleQuestions = [
                 "如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？", // 例題1
@@ -45,7 +45,7 @@ class ChatApp {
             ];
             
             for (let i = 0; i < exampleQuestions.length; i++) {
-                if (lastUserMessage.includes(exampleQuestions[i]) || exampleQuestions[i].includes(lastUserMessage)) {
+                if (currentQuestion.includes(exampleQuestions[i]) || exampleQuestions[i].includes(currentQuestion)) {
                     digit1 = (i + 1).toString();
                     break;
                 }
