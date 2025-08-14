@@ -675,26 +675,20 @@ class ChatApp {
 
     extractReferences(groundingMetadata) {
         const references = [];
-        const seenUrls = new Set();
 
-        if (groundingMetadata.groundingSupports) {
-            groundingMetadata.groundingSupports.forEach(support => {
-                if (support.groundingChunkIndices && groundingMetadata.groundingChunks) {
-                    support.groundingChunkIndices.forEach(index => {
-                        const chunk = groundingMetadata.groundingChunks[index];
-                        if (chunk && chunk.web) {
-                            const url = chunk.web.uri;
-                            const title = chunk.web.title || 'Untitled';
-                            
-                            if (url && !seenUrls.has(url)) {
-                                seenUrls.add(url);
-                                references.push({
-                                    title: title,
-                                    url: url,
-                                    snippet: ''
-                                });
-                            }
-                        }
+        // 直接按照 groundingChunks 的順序提取所有引用來源
+        // 這樣可以保持與 chunk 索引的對應關係
+        if (groundingMetadata.groundingChunks) {
+            groundingMetadata.groundingChunks.forEach((chunk, index) => {
+                if (chunk && chunk.web) {
+                    const url = chunk.web.uri;
+                    const title = chunk.web.title || 'Untitled';
+                    
+                    references.push({
+                        title: title,
+                        url: url,
+                        snippet: '',
+                        chunkIndex: index // 保存原始 chunk 索引，用於調試
                     });
                 }
             });
@@ -924,12 +918,20 @@ class ChatApp {
         if (!groundingSupports || groundingSupports.length === 0) return text;
         
         let annotatedText = text;
-        let footnoteCounter = 1;
         
         // 處理每個 grounding support
         groundingSupports.forEach((support, index) => {
-            if (support.segment && support.segment.text) {
+            if (support.segment && support.segment.text && support.groundingChunkIndices) {
                 const segmentText = support.segment.text.trim();
+                
+                // 生成該段落對應的所有引用來源編號
+                const chunkIndices = support.groundingChunkIndices;
+                const footnoteNumbers = chunkIndices.map(chunkIndex => chunkIndex + 1); // chunk index 轉換為顯示編號 (0-based 轉 1-based)
+                
+                // 建立註腳標記，支援多個來源
+                const footnoteRefsHtml = footnoteNumbers.map(num => 
+                    `<sup class="footnote-ref" onclick="document.getElementById('ref-${num}')?.scrollIntoView({behavior: 'smooth', block: 'center'}); document.getElementById('ref-${num}')?.classList.add('highlight'); setTimeout(() => document.getElementById('ref-${num}')?.classList.remove('highlight'), 2000);">[${num}]</sup>`
+                ).join('');
                 
                 // 在文本中查找並替換匹配的段落
                 // 使用更寬鬆的匹配策略，因為 API 返回的文本可能與原始回答略有不同
@@ -938,8 +940,7 @@ class ChatApp {
                 
                 // 如果在文本中找到匹配，添加註腳
                 if (regex.test(annotatedText)) {
-                    annotatedText = annotatedText.replace(regex, `$1<sup class="footnote-ref" onclick="document.getElementById('ref-${footnoteCounter}')?.scrollIntoView({behavior: 'smooth', block: 'center'}); document.getElementById('ref-${footnoteCounter}')?.classList.add('highlight'); setTimeout(() => document.getElementById('ref-${footnoteCounter}')?.classList.remove('highlight'), 2000);">[${footnoteCounter}]</sup>`);
-                    footnoteCounter++;
+                    annotatedText = annotatedText.replace(regex, `$1${footnoteRefsHtml}`);
                 }
             }
         });
