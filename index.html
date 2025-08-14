@@ -131,30 +131,30 @@
 <body>
     <div class="container">
         <div class="logo">🤖</div>
-        <h1 class="title">研究系統入口</h1>
-        <p class="subtitle">正在為您分配實驗版本...</p>
+        <h1 class="title">AI 問答系統</h1>
+        <p class="subtitle">正在為您準備最佳體驗...</p>
         
         <div class="loading-container">
             <div class="spinner"></div>
-            <div class="status-text" id="statusText">連接至分配服務...</div>
+            <div class="status-text" id="statusText">正在載入系統...</div>
         </div>
 
         <div class="info-box">
-            <div class="info-title">研究說明</div>
+            <div class="info-title">系統說明</div>
             <div class="info-text">
-                您即將參與一項關於 AI 輔助問答系統的研究。<br>
-                系統將自動為您分配到其中一個實驗版本，請按照正常方式使用即可。
+                歡迎使用 AI 問答系統！<br>
+                系統正在為您準備最佳的使用體驗，請稍候。
             </div>
         </div>
 
         <div class="error-message" id="errorMessage">
-            <strong>連接失敗</strong><br>
-            無法連接到分配服務，請檢查網路連接或稍後再試。
+            <strong>載入失敗</strong><br>
+            無法載入系統，請檢查網路連接或稍後再試。
             <button class="retry-button" onclick="assignUser()">重試</button>
         </div>
 
         <div class="footer">
-            感謝您參與本次研究 © 2024
+            感謝您使用本系統 © 2024
         </div>
     </div>
 
@@ -172,10 +172,10 @@
             
             // 隱藏錯誤訊息並顯示載入狀態
             errorMessage.style.display = 'none';
-            statusText.textContent = '正在分配實驗版本...';
+            statusText.textContent = '正在載入系統...';
             
             try {
-                console.log('🎯 開始使用者分配流程');
+                console.log('🎯 開始系統載入流程');
                 
                 const response = await fetch(`${workerUrl}/assign`, {
                     method: 'POST',
@@ -197,32 +197,32 @@
                 console.log('📋 分配結果:', result);
 
                 if (result.success && result.redirectUrl) {
-                    statusText.textContent = `分配完成！正在跳轉到 ${result.assignedCase}...`;
+                    statusText.textContent = '系統載入完成！正在進入...';
                     
-                    // 短暫延遲後跳轉，讓使用者看到分配結果
+                    // 短暫延遲後跳轉，讓使用者看到載入完成
                     setTimeout(() => {
                         console.log(`🚀 跳轉到: ${result.redirectUrl}`);
                         window.location.href = result.redirectUrl;
                     }, 1500);
                 } else {
-                    throw new Error(result.error || '分配服務回應異常');
+                    throw new Error(result.error || '系統載入異常');
                 }
 
             } catch (error) {
-                console.error('❌ 使用者分配失敗:', error);
-                statusText.textContent = '分配失敗';
+                console.error('❌ 系統載入失敗:', error);
+                statusText.textContent = '載入失敗';
                 errorMessage.style.display = 'block';
                 
                 // 如果是網路錯誤，嘗試使用本地備用方案
                 if (error.name === 'TypeError' || error.message.includes('fetch')) {
-                    console.log('🔄 使用本地備用分配方案');
+                    console.log('🔄 使用本地備用方案');
                     useLocalFallback();
                 }
             }
         }
 
         function useLocalFallback() {
-            console.log('📱 啟用本地備用分配邏輯');
+            console.log('📱 啟用本地備用邏輯');
             
             // 使用本地時間戳和隨機數作為備用分配邏輯
             const timestamp = Date.now();
@@ -238,7 +238,7 @@
             
             console.log(`🎲 本地分配結果: ${assignedCase}`);
             
-            document.getElementById('statusText').textContent = `本地分配完成！正在跳轉到 ${assignedCase}...`;
+            document.getElementById('statusText').textContent = '本地載入完成！正在進入系統...';
             document.getElementById('errorMessage').style.display = 'none';
             
             setTimeout(() => {

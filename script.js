@@ -1240,6 +1240,16 @@ class ChatApp {
         formatted = this.escapeHtml(formatted);
         formatted = formatted.replace(/\n/g, '<br>');
         
+        // 處理 Markdown 格式 - 移除標題和斜體
+        // 移除 Markdown 標題 ### ## #
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        
+        // 處理粗體文字 **text** - 保留
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // 移除斜體格式 *text* - 只保留文字內容
+        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
+        
         // 處理數字列表
         formatted = formatted.replace(/(\d+)\.\s/g, '<strong>$1.</strong> ');
         
@@ -1262,11 +1272,15 @@ class ChatApp {
         formatted = this.escapeHtml(formatted);
         formatted = formatted.replace(/\n/g, '<br>');
         
-        // 處理粗體文字
+        // 處理 Markdown 格式 - 移除標題和斜體
+        // 移除 Markdown 標題 ### ## #
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        
+        // 處理粗體文字 - 保留
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         
-        // 處理斜體文字
-        formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        // 移除斜體格式 *text* - 只保留文字內容
+        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
         
         // 處理標題（以冒號結尾）
         formatted = formatted.replace(/^([^<\n]+：)/gm, '<strong style="color: #2c3e50;">$1</strong>');
