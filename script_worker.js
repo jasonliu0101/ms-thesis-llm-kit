@@ -768,6 +768,9 @@ class ChatApp {
         }
 
         // 主要回答內容
+        // 檢查是否要顯示引用來源
+        const willShowReferences = this.showReferencesCheckbox.checked && data.references && data.references.length > 0;
+        
         responseHtml += `
             <div class="response-section">
                 <div class="response-header">
@@ -775,13 +778,13 @@ class ChatApp {
                     <span>回答</span>
                 </div>
                 <div class="response-content">
-                    ${this.formatResponse(data.answer, data.groundingData)}
+                    ${this.formatResponse(data.answer, data.groundingData, willShowReferences)}
                 </div>
             </div>
         `;
 
         // 顯示引用來源（如果啟用且有內容）
-        if (this.showReferencesCheckbox.checked && data.references && data.references.length > 0) {
+        if (willShowReferences) {
             responseHtml += `
                 <div class="references-section">
                     <div class="references-header">
@@ -880,7 +883,7 @@ class ChatApp {
         return formatted;
     }
 
-    formatResponse(response, groundingData = null) {
+    formatResponse(response, groundingData = null, shouldShowReferences = false) {
         if (!response) return '';
         
         // 移除任何 <thinking> 標籤（如果意外包含在回答中）
@@ -909,8 +912,8 @@ class ChatApp {
         // 處理項目符號列表
         formatted = formatted.replace(/^[-•]\s/gm, '<span style="color: #666;">•</span> ');
         
-        // 處理引用註腳（如果有 grounding 數據且啟用引用）
-        if (this.showReferencesCheckbox.checked && groundingData && groundingData.groundingSupports) {
+        // 處理引用註腳（只在引用來源會被顯示時才添加）
+        if (shouldShowReferences && groundingData && groundingData.groundingSupports) {
             formatted = this.addFootnotes(formatted, groundingData.groundingSupports);
         }
         
