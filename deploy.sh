@@ -34,7 +34,7 @@ if [ "$UPDATE_WORKER" = true ]; then
     wrangler deploy --compatibility-date 2024-01-15 --keep-vars
 else
     echo "📦 部署 Cloudflare Worker..."
-    wrangler deploy
+    wrangler deploy --keep-vars
 fi
 
 if [ $? -eq 0 ]; then

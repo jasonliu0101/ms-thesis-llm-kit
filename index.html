@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>研究系統入口 | LLM 互動系統</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 3rem;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .loading-container {
+            margin: 2rem 0;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-text {
+            font-size: 1rem;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-text {
+            color: #6c757d;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .retry-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 1rem;
+            transition: background-color 0.3s;
+        }
+
+        .retry-button:hover {
+            background: #5a6fd8;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🤖</div>
+        <h1 class="title">研究系統入口</h1>
+        <p class="subtitle">正在為您分配實驗版本...</p>
+        
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <div class="status-text" id="statusText">連接至分配服務...</div>
+        </div>
+
+        <div class="info-box">
+            <div class="info-title">研究說明</div>
+            <div class="info-text">
+                您即將參與一項關於 AI 輔助問答系統的研究。<br>
+                系統將自動為您分配到其中一個實驗版本，請按照正常方式使用即可。
+            </div>
+        </div>
+
+        <div class="error-message" id="errorMessage">
+            <strong>連接失敗</strong><br>
+            無法連接到分配服務，請檢查網路連接或稍後再試。
+            <button class="retry-button" onclick="assignUser()">重試</button>
+        </div>
+
+        <div class="footer">
+            感謝您參與本次研究 © 2024
+        </div>
+    </div>
+
+    <script>
+        const workerUrl = 'https://ai-qa-backend.jasonliu1563.workers.dev'; // Worker URL
+        
+        // 頁面載入時自動分配使用者
+        window.onload = function() {
+            assignUser();
+        };
+
+        async function assignUser() {
+            const statusText = document.getElementById('statusText');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // 隱藏錯誤訊息並顯示載入狀態
+            errorMessage.style.display = 'none';
+            statusText.textContent = '正在分配實驗版本...';
+            
+            try {
+                console.log('🎯 開始使用者分配流程');
+                
+                const response = await fetch(`${workerUrl}/assign`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        timestamp: Date.now(),
+                        userAgent: navigator.userAgent,
+                        referrer: document.referrer || 'direct'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('📋 分配結果:', result);
+
+                if (result.success && result.redirectUrl) {
+                    statusText.textContent = `分配完成！正在跳轉到 ${result.assignedCase}...`;
+                    
+                    // 短暫延遲後跳轉，讓使用者看到分配結果
+                    setTimeout(() => {
+                        console.log(`🚀 跳轉到: ${result.redirectUrl}`);
+                        window.location.href = result.redirectUrl;
+                    }, 1500);
+                } else {
+                    throw new Error(result.error || '分配服務回應異常');
+                }
+
+            } catch (error) {
+                console.error('❌ 使用者分配失敗:', error);
+                statusText.textContent = '分配失敗';
+                errorMessage.style.display = 'block';
+                
+                // 如果是網路錯誤，嘗試使用本地備用方案
+                if (error.name === 'TypeError' || error.message.includes('fetch')) {
+                    console.log('🔄 使用本地備用分配方案');
+                    useLocalFallback();
+                }
+            }
+        }
+
+        function useLocalFallback() {
+            console.log('📱 啟用本地備用分配邏輯');
+            
+            // 使用本地時間戳和隨機數作為備用分配邏輯
+            const timestamp = Date.now();
+            const random = Math.random();
+            
+            // 結合時間戳和隨機數來決定分配
+            const shouldUseCaseA = (timestamp + Math.floor(random * 1000)) % 2 === 0;
+            
+            const assignedCase = shouldUseCaseA ? 'Case A' : 'Case B';
+            const redirectUrl = shouldUseCaseA 
+                ? 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-a.html'
+                : 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-b.html';
+            
+            console.log(`🎲 本地分配結果: ${assignedCase}`);
+            
+            document.getElementById('statusText').textContent = `本地分配完成！正在跳轉到 ${assignedCase}...`;
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            setTimeout(() => {
+                window.location.href = redirectUrl;
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

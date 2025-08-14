@@ -70,7 +70,7 @@
 
 ```bash
 # 部署更新的 worker 程式碼
-npx wrangler deploy
+npx wrangler deploy --keep-vars
 
 # 確認部署成功
 npx wrangler tail

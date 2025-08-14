@@ -1,4 +1,4 @@
-// Cloudflare Worker for handling Gemini API requests and Azure Translation
+// Cloudflare Worker for handling Gemini API requests and Google Cloud Translation
 export default {
   async fetch(request, env, ctx) {
     // 處理 CORS 預檢請求
@@ -10,7 +10,9 @@ export default {
     const path = url.pathname;
 
     // 路由處理
-    if (path === '/translate' && request.method === 'POST') {
+    if (path === '/assign' && request.method === 'POST') {
+      return handleUserAssignment(request, env);
+    } else if (path === '/translate' && request.method === 'POST') {
       return handleTranslateRequest(request, env);
     } else if (path === '/' && request.method === 'POST') {
       return handleGeminiRequest(request, env);
@@ -20,31 +22,191 @@ export default {
   }
 };
 
+// 新增：簡化的 Gemini API 調用函數（作為最後的備用）
+async function callSimplifiedGeminiAPI(question, env) {
+  console.log('🔧 執行簡化 Gemini API 調用...');
+  
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${env.GEMINI_API_KEY}`;
+  
+  const payload = {
+    contents: [{
+      parts: [{
+        text: `請回答以下問題：${question}`
+      }]
+    }],
+    generationConfig: {
+      temperature: 0.7,
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: 1024,
+    }
+  };
+
+  console.log('🔧 簡化 API 請求 payload:', JSON.stringify(payload, null, 2));
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload)
+  });
+
+  console.log('🔧 簡化 API 響應狀態:', response.status);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ 簡化 API 錯誤響應:', errorText);
+    throw new Error(`簡化 Gemini API 失敗 (${response.status}): ${errorText}`);
+  }
+
+  const result = await response.json();
+  console.log('✅ 簡化 API 成功響應:', JSON.stringify(result, null, 2));
+
+  if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
+    return {
+      success: true,
+      answer: result.candidates[0].content.parts[0].text,
+      source: "Gemini (簡化模式)"
+    };
+  } else {
+    throw new Error('簡化 API 響應格式異常');
+  }
+}
+
+// 使用 Google 搜尋的 Gemini API 調用
+async function handleUserAssignment(request, env) {
+  try {
+    console.log('🎯 收到使用者分配請求');
+    
+    const requestData = await request.json();
+    console.log('📋 請求資料:', JSON.stringify(requestData, null, 2));
+    
+    // 獲取使用者計數器 (使用 Durable Objects 或 KV 存儲)
+    // 這裡使用簡單的時間戳 + 隨機數方法來模擬輪流分配
+    const timestamp = Date.now();
+    const clientInfo = {
+      timestamp: requestData.timestamp || timestamp,
+      userAgent: requestData.userAgent || 'unknown',
+      referrer: requestData.referrer || 'direct'
+    };
+    
+    // 創建一個基於時間和客戶端資訊的雜湊值
+    const hashInput = `${clientInfo.timestamp}-${clientInfo.userAgent}-${clientInfo.referrer}`;
+    let hash = 0;
+    for (let i = 0; i < hashInput.length; i++) {
+      const char = hashInput.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // 轉換為32位整數
+    }
+    
+    // 根據雜湊值決定分配（偶數為 Case A，奇數為 Case B）
+    const shouldUseCaseA = Math.abs(hash) % 2 === 0;
+    
+    const assignedCase = shouldUseCaseA ? 'Case A' : 'Case B';
+    const redirectUrl = shouldUseCaseA 
+      ? 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-a.html'
+      : 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-b.html';
+    
+    console.log('✅ 使用者分配完成:', {
+      assignedCase,
+      redirectUrl,
+      hash: hash,
+      shouldUseCaseA
+    });
+    
+    // 記錄分配結果（可用於後續分析）
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      assignedCase,
+      clientInfo,
+      hash,
+      redirectUrl
+    };
+    
+    console.log('📊 分配日誌:', JSON.stringify(logEntry, null, 2));
+    
+    return new Response(JSON.stringify({
+      success: true,
+      assignedCase,
+      redirectUrl,
+      timestamp: new Date().toISOString()
+    }), {
+      status: 200,
+      headers: getCORSHeaders()
+    });
+    
+  } catch (error) {
+    console.error('❌ 使用者分配錯誤:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'User assignment failed',
+      details: error.message
+    }), {
+      status: 500,
+      headers: getCORSHeaders()
+    });
+  }
+}
+
 // 處理翻譯請求
 async function handleTranslateRequest(request, env) {
   try {
-    const { text, from, to } = await request.json();
+    console.log('🌏 收到翻譯請求，開始解析...');
+    console.log('📍 請求方法:', request.method);
+    console.log('📍 請求 URL:', request.url);
+    console.log('📍 請求頭部:', JSON.stringify([...request.headers.entries()], null, 2));
     
-    if (!text) {
-      return new Response(JSON.stringify({ error: 'Text is required' }), {
+    // 檢查請求體是否可讀
+    const requestClone = request.clone();
+    const requestText = await requestClone.text();
+    console.log('📋 原始請求體:', requestText);
+    
+    let requestData;
+    try {
+      requestData = JSON.parse(requestText);
+    } catch (parseError) {
+      console.error('❌ JSON 解析錯誤:', parseError);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON format',
+        details: parseError.message 
+      }), {
+        status: 400,
+        headers: getCORSHeaders()
+      });
+    }
+    
+    console.log('📋 解析後的請求資料:', JSON.stringify(requestData, null, 2));
+    
+    const { q, target, source } = requestData;
+    
+    console.log('🔍 參數檢查:', {
+      'q 存在': !!q,
+      'q 類型': typeof q,
+      'q 長度': q ? q.length : 'N/A',
+      'target': target,
+      'source': source
+    });
+    
+    if (!q) {
+      console.error('❌ 缺少 q 參數');
+      console.error('❌ 完整請求資料:', JSON.stringify(requestData, null, 2));
+      return new Response(JSON.stringify({ error: 'Text (q parameter) is required' }), {
         status: 400,
         headers: getCORSHeaders()
       });
     }
 
     console.log('🌏 翻譯請求:', {
-      textLength: text.length,
-      from: from || 'auto',
-      to: to || 'zh-Hant'
+      textLength: q.length,
+      source: source || 'auto',
+      target: target || 'zh-TW'
     });
 
-    // 呼叫 Azure Translator API
-    const translatedText = await callAzureTranslator(text, from || 'en', to || 'zh-Hant', env);
+    // 呼叫翻譯 API（Google Cloud 主要，Azure 備用）
+    const result = await callTranslationWithFallback(q, target || 'zh-TW', source, env);
     
-    return new Response(JSON.stringify({ 
-      translatedText: translatedText,
-      originalText: text 
-    }), {
+    return new Response(JSON.stringify(result), {
       status: 200,
       headers: getCORSHeaders()
     });
@@ -80,15 +242,79 @@ async function handleGeminiRequest(request, env) {
       options
     });
 
+    // 檢查地理位置限制
+    if (!env.GEMINI_API_KEY) {
+      return new Response(JSON.stringify({
+        error: 'Gemini API 服務不可用',
+        details: 'API 金鑰未設定',
+        fallback_message: '抱歉，Gemini API 服務目前不可用。這可能是由於地理位置限制或設定問題。請聯繫管理員。'
+      }), {
+        status: 503,
+        headers: getCORSHeaders()
+      });
+    }
+
     // 根據前端參數決定調用策略
     if (enableSearch !== false) {
       // 雙重調用：有 grounding 和無 grounding
-      const response = await handleDualGeminiAPI(question, env, { enableSearch, showThinking });
-      return createResponse(response);
+      try {
+        const response = await handleDualGeminiAPI(question, env, { enableSearch, showThinking });
+        return createResponse(response);
+      } catch (dualError) {
+        console.error('❌ 雙重 API 調用失敗:', dualError.message);
+        
+        // 檢查是否為地理位置錯誤
+        if (dualError.message.includes('User location is not supported')) {
+          return new Response(JSON.stringify({
+            error: 'Gemini API 地理位置限制',
+            details: 'Gemini API 在您的地理位置不可用',
+            fallback_message: '抱歉，Gemini API 服務在您的地理位置不可用。這是 Google 的服務限制。'
+          }), {
+            status: 503,
+            headers: getCORSHeaders()
+          });
+        }
+        
+        // 嘗試簡化的單一調用
+        try {
+          const fallbackResponse = await callSimplifiedGeminiAPI(question, env);
+          return createResponse(fallbackResponse);
+        } catch (fallbackError) {
+          console.error('❌ 簡化調用也失敗:', fallbackError.message);
+          
+          // 如果也是地理位置問題，返回友好錯誤
+          if (fallbackError.message.includes('User location is not supported')) {
+            return new Response(JSON.stringify({
+              error: 'Gemini API 地理位置限制',
+              details: 'Gemini API 在您的地理位置不可用',
+              fallback_message: '抱歉，Gemini API 服務在您的地理位置不可用。這是 Google 的服務限制。'
+            }), {
+              status: 503,
+              headers: getCORSHeaders()
+            });
+          }
+          
+          throw new Error(`所有 Gemini API 調用都失敗 - 主要: ${dualError.message}, 備用: ${fallbackError.message}`);
+        }
+      }
     } else {
       // 單純無 grounding 調用
-      const response = await callGeminiAPI(question, env, false);
-      return createResponse(response);
+      try {
+        const response = await callGeminiAPI(question, env, false);
+        return createResponse(response);
+      } catch (singleError) {
+        if (singleError.message.includes('User location is not supported')) {
+          return new Response(JSON.stringify({
+            error: 'Gemini API 地理位置限制',
+            details: 'Gemini API 在您的地理位置不可用',
+            fallback_message: '抱歉，Gemini API 服務在您的地理位置不可用。這是 Google 的服務限制。'
+          }), {
+            status: 503,
+            headers: getCORSHeaders()
+          });
+        }
+        throw singleError;
+      }
     }
 
   } catch (error) {
@@ -162,7 +388,12 @@ async function handleDualGeminiAPI(question, env, options) {
     // 檢查是否至少有一個成功
     if (!dualResponse.searchResponse && !dualResponse.reasoningResponse) {
       console.error('💥 兩個請求都失敗');
-      throw new Error('Both API calls failed');
+      console.error('🔍 搜索請求錯誤:', dualResponse.searchError);
+      console.error('🧠 推理請求錯誤:', dualResponse.reasoningError);
+      
+      // 提供更詳細的錯誤信息
+      const detailedError = `Gemini API 雙重調用失敗 - 搜索: ${dualResponse.searchError || '未知錯誤'}, 推理: ${dualResponse.reasoningError || '未知錯誤'}`;
+      throw new Error(detailedError);
     }
 
     console.log('🎯 回傳雙重回應結構');
@@ -174,8 +405,38 @@ async function handleDualGeminiAPI(question, env, options) {
   }
 }
 
-// 調用 Azure Translator API
-async function callAzureTranslator(text, from, to, env) {
+// 翻譯服務備援邏輯：優先使用 Google Cloud Translation，失敗時使用 Azure Translator
+async function callTranslationWithFallback(text, target, source, env) {
+  console.log('🔄 開始翻譯服務備援流程');
+  
+  try {
+    // 首先嘗試 Google Cloud Translation
+    console.log('🌏 嘗試 Google Cloud Translation API...');
+    const googleResult = await callGoogleTranslator(text, target, source, env);
+    console.log('✅ Google Cloud Translation 成功');
+    return googleResult;
+    
+  } catch (googleError) {
+    console.warn('⚠️ Google Cloud Translation 失敗:', googleError.message);
+    console.log('🔄 切換到 Azure Translator 備用方案...');
+    
+    try {
+      // 備用方案：使用 Azure Translator
+      const azureResult = await callAzureTranslator(text, target, source, env);
+      console.log('✅ Azure Translator 備用方案成功');
+      return azureResult;
+      
+    } catch (azureError) {
+      console.error('❌ Azure Translator 備用方案也失敗:', azureError.message);
+      
+      // 兩個服務都失敗，拋出綜合錯誤
+      throw new Error(`翻譯服務不可用 - Google: ${googleError.message}, Azure: ${azureError.message}`);
+    }
+  }
+}
+
+// 調用 Azure Translator API (備用方案)
+async function callAzureTranslator(text, target, source, env) {
   const apiKey = env.AZURE_TRANSLATOR_KEY;
   const region = env.AZURE_TRANSLATOR_REGION || 'eastasia';
   
@@ -183,38 +444,41 @@ async function callAzureTranslator(text, from, to, env) {
     throw new Error('AZURE_TRANSLATOR_KEY not configured');
   }
 
-  const endpoint = 'https://api.cognitive.microsofttranslator.com';
-  const path = '/translate';
-  const constructed_url = endpoint + path;
-
+  // Azure Translator API 端點
+  const endpoint = 'https://api.cognitive.microsofttranslator.com/translate';
+  
+  // 構建查詢參數
   const params = new URLSearchParams({
     'api-version': '3.0',
-    'from': from,
-    'to': to
+    'to': target === 'zh-TW' ? 'zh-Hant' : target // Azure 使用 zh-Hant 表示繁體中文
   });
-
-  const headers = {
-    'Ocp-Apim-Subscription-Key': apiKey,
-    'Ocp-Apim-Subscription-Region': region,
-    'Content-type': 'application/json',
-    'X-ClientTraceId': crypto.randomUUID()
-  };
-
-  const body = [{
-    'text': text
-  }];
+  
+  if (source && source !== 'auto') {
+    params.append('from', source);
+  }
+  
+  // Azure 請求體格式
+  const requestBody = [
+    {
+      'text': text
+    }
+  ];
 
   console.log('🌏 調用 Azure Translator:', {
-    from,
-    to,
+    target: target === 'zh-TW' ? 'zh-Hant' : target,
+    source: source || 'auto-detect',
     textLength: text.length,
-    endpoint: constructed_url
+    endpoint: `${endpoint}?${params.toString()}`
   });
 
-  const response = await fetch(`${constructed_url}?${params}`, {
+  const response = await fetch(`${endpoint}?${params.toString()}`, {
     method: 'POST',
-    headers: headers,
-    body: JSON.stringify(body)
+    headers: {
+      'Ocp-Apim-Subscription-Key': apiKey,
+      'Ocp-Apim-Subscription-Region': region,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
@@ -224,14 +488,93 @@ async function callAzureTranslator(text, from, to, env) {
   }
 
   const result = await response.json();
+  console.log('📋 Azure Translator 完整回應:', JSON.stringify(result, null, 2));
   
   if (result && result.length > 0 && result[0].translations && result[0].translations.length > 0) {
-    const translatedText = result[0].translations[0].text;
-    console.log('✅ 翻譯成功，原文長度:', text.length, '譯文長度:', translatedText.length);
-    return translatedText;
+    const translation = result[0].translations[0];
+    console.log('✅ Azure 翻譯成功，原文長度:', text.length, '譯文長度:', translation.text.length);
+    
+    // 返回符合 Google Cloud Translation API 格式的回應（保持一致性）
+    return {
+      data: {
+        translations: [{
+          translatedText: translation.text,
+          detectedSourceLanguage: result[0].detectedLanguage?.language || source
+        }]
+      }
+    };
   } else {
     console.error('Unexpected Azure Translator response format:', result);
     throw new Error('Unexpected response format from Azure Translator');
+  }
+}
+
+// 調用 Google Cloud Translation API
+async function callGoogleTranslator(text, target, source, env) {
+  const apiKey = env.GOOGLE_CLOUD_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('GOOGLE_CLOUD_API_KEY not configured');
+  }
+
+  // 使用 POST 方式，API Key 在 URL 中
+  const endpoint = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
+  
+  // 根據官方文檔，POST 請求的格式
+  const requestBody = {
+    q: text,
+    target: target,
+    format: 'text'  // 添加 format 參數
+  };
+  
+  // 如果指定來源語言，加入 source 參數
+  if (source && source !== 'auto') {
+    requestBody.source = source;
+  }
+
+  console.log('🌏 調用 Google Cloud Translation:', {
+    target,
+    source: source || 'auto-detect',
+    textLength: text.length,
+    endpoint: endpoint.replace(apiKey, 'API_KEY_HIDDEN'),
+    requestBody: JSON.stringify(requestBody, null, 2)
+  });
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Google Cloud Translation API error:', response.status, errorText);
+    console.error('Request body was:', JSON.stringify(requestBody, null, 2));
+    console.error('Request URL was:', endpoint.replace(apiKey, 'API_KEY_HIDDEN'));
+    throw new Error(`Google Cloud Translation API error: ${response.status} ${errorText}`);
+  }
+
+  const result = await response.json();
+  console.log('📋 Google Cloud Translation 完整回應:', JSON.stringify(result, null, 2));
+  
+  if (result && result.data && result.data.translations && result.data.translations.length > 0) {
+    const translation = result.data.translations[0];
+    console.log('✅ 翻譯成功，原文長度:', text.length, '譯文長度:', translation.translatedText.length);
+    
+    // 返回符合 Google Cloud Translation API 格式的回應
+    return {
+      data: {
+        translations: [{
+          translatedText: translation.translatedText,
+          detectedSourceLanguage: translation.detectedSourceLanguage || source
+        }]
+      }
+    };
+  } else {
+    console.error('Unexpected Google Cloud Translation response format:', result);
+    throw new Error('Unexpected response format from Google Cloud Translation');
   }
 }
 
@@ -334,8 +677,24 @@ async function callGeminiAPI(question, env, withSearch = true) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ API 錯誤:', errorText);
-    throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+    console.error('❌ Gemini API 錯誤:', errorText);
+    console.error('❌ 請求體:', JSON.stringify(requestBody, null, 2));
+    console.error('❌ 請求 URL:', url.replace(apiKey, 'API_KEY_HIDDEN'));
+    
+    // 提供更詳細的錯誤信息
+    let detailedError = `Gemini API error: ${response.status} ${response.statusText}`;
+    if (errorText) {
+      try {
+        const errorObj = JSON.parse(errorText);
+        if (errorObj.error && errorObj.error.message) {
+          detailedError = `Gemini API error: ${errorObj.error.message}`;
+        }
+      } catch (parseError) {
+        detailedError += ` - ${errorText}`;
+      }
+    }
+    
+    throw new Error(detailedError);
   }
 
   const responseData = await response.json();

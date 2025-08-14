@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>翻譯 API 測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 翻譯 API 測試工具</h1>
+        
+        <div class="form-group">
+            <label for="workerUrl">Worker URL:</label>
+            <input type="text" id="workerUrl" value="https://ai-qa-backend.jasonliu1563.workers.dev" placeholder="請輸入您的 Worker URL">
+        </div>
+        
+        <div class="form-group">
+            <label for="testText">測試文本:</label>
+            <textarea id="testText" rows="3" placeholder="輸入要翻譯的英文文本">Hello, how are you today? This is a test message.</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="targetLang">目標語言:</label>
+            <input type="text" id="targetLang" value="zh-TW" placeholder="例如: zh-TW">
+        </div>
+        
+        <div class="form-group">
+            <label for="sourceLang">來源語言 (可選):</label>
+            <input type="text" id="sourceLang" value="en" placeholder="例如: en，留空為自動檢測">
+        </div>
+        
+        <button onclick="testTranslation()">🚀 測試翻譯</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function testTranslation() {
+            const workerUrl = document.getElementById('workerUrl').value.trim();
+            const testText = document.getElementById('testText').value.trim();
+            const targetLang = document.getElementById('targetLang').value.trim();
+            const sourceLang = document.getElementById('sourceLang').value.trim();
+            const resultDiv = document.getElementById('result');
+            
+            if (!workerUrl || !testText || !targetLang) {
+                showResult('請填寫必要欄位', 'error');
+                return;
+            }
+            
+            try {
+                showResult('正在測試翻譯...', 'success');
+                
+                console.log('🔧 開始翻譯測試');
+                console.log('Worker URL:', workerUrl);
+                console.log('測試文本:', testText);
+                console.log('目標語言:', targetLang);
+                console.log('來源語言:', sourceLang || 'auto');
+                
+                const requestBody = {
+                    q: testText,
+                    target: targetLang
+                };
+                
+                if (sourceLang) {
+                    requestBody.source = sourceLang;
+                }
+                
+                console.log('請求體:', JSON.stringify(requestBody, null, 2));
+                
+                const response = await fetch(`${workerUrl}/translate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                console.log('回應狀態:', response.status, response.statusText);
+                
+                const responseText = await response.text();
+                console.log('原始回應:', responseText);
+                
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON 解析錯誤:', parseError);
+                    showResult(`回應解析錯誤:\n${responseText}`, 'error');
+                    return;
+                }
+                
+                if (!response.ok) {
+                    console.error('API 錯誤:', result);
+                    showResult(`API 錯誤 (${response.status}):\n${JSON.stringify(result, null, 2)}`, 'error');
+                    return;
+                }
+                
+                console.log('解析後的結果:', result);
+                
+                if (result.data && result.data.translations && result.data.translations[0]) {
+                    const translation = result.data.translations[0];
+                    const successMessage = `✅ 翻譯成功!\n\n原文: ${testText}\n譯文: ${translation.translatedText}\n檢測到的來源語言: ${translation.detectedSourceLanguage || '未知'}`;
+                    showResult(successMessage, 'success');
+                } else if (result.error) {
+                    showResult(`❌ 翻譯失敗:\n錯誤: ${result.error}\n詳情: ${result.details || '無詳情'}`, 'error');
+                } else {
+                    showResult(`⚠️ 未知的回應格式:\n${JSON.stringify(result, null, 2)}`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('測試過程發生錯誤:', error);
+                showResult(`❌ 測試失敗:\n${error.message}`, 'error');
+            }
+        }
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${type}`;
+        }
+        
+        // 頁面載入時自動設定焦點
+        window.onload = function() {
+            document.getElementById('testText').focus();
+        };
+    </script>
+</body>
+</html>

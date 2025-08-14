@@ -2,9 +2,31 @@
 
 ## 📋 快速導航
 
+- [使用者分配系統](#使用者分配系統) (新功能)
 - [前後端分離模式部署](#前後端分離模式部署) (推薦)
 - [純前端模式部署](#純前端模式部署) (簡單)
 - [模式切換](#模式切換)
+
+## 🎯 使用者分配系統
+
+### 系統說明
+
+現在系統具有自動使用者分配功能：
+- **統一入口**: 所有使用者訪問主頁 `index.html`
+- **自動分配**: 後端自動將使用者分配到 Case A 或 Case B
+- **自動跳轉**: 分配完成後自動跳轉到對應的實驗頁面
+
+### 分配邏輯
+- 使用基於時間戳和客戶端資訊的雜湊演算法
+- 確保 Case A 和 Case B 大致均勻分配
+- 偶數雜湊值 → Case A，奇數雜湊值 → Case B
+
+### 網址結構
+- **主入口**: `https://jasonliu0101.github.io/ms-thesis-llm-kit/`
+- **Case A**: `https://jasonliu0101.github.io/ms-thesis-llm-kit/case-a.html`
+- **Case B**: `https://jasonliu0101.github.io/ms-thesis-llm-kit/case-b.html`
+
+詳細設定請參考：[使用者分配系統設定指南](./USER_ASSIGNMENT_SYSTEM.md)
 
 ## 🚀 前後端分離模式部署
 
@@ -30,7 +52,7 @@
 
 3. **部署 Worker**
    ```bash
-   wrangler deploy
+   wrangler deploy --keep-vars
    ```
 
 4. **設定環境變數**
@@ -38,6 +60,9 @@
    - 前往 Workers & Pages > 您的 Worker > Settings > Variables
    - 添加環境變數：
      - `GEMINI_API_KEY`: 您的 Google Gemini API Key
+     - `GOOGLE_CLOUD_API_KEY`: 您的 Google Cloud Translation API Key (主要)
+     - `AZURE_TRANSLATOR_KEY`: 您的 Azure Translator API Key (備用)
+     - `AZURE_TRANSLATOR_REGION`: Azure 服務區域 (例如: eastasia)
 
 5. **記錄 Worker URL**
    部署成功後，記住您的 Worker URL，格式通常為：
@@ -126,7 +151,7 @@
 
 2. **重新部署 Worker**
    ```bash
-   wrangler deploy
+   wrangler deploy --keep-vars
    ```
 
 ## 📂 檔案結構

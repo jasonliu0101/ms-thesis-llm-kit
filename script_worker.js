@@ -11,7 +11,7 @@ class ChatApp {
         
         // 設定 Worker URL - 部署後請更新此 URL
         // 部署說明請參考 README_DEPLOYMENT.md
-        this.workerUrl = 'https://ai-qa-backend.jasonliu1563.workers.dev'; // 請替換為您的 Worker URL
+        this.workerUrl = 'https://ai-qa-backend.jasonliu1563.workers.dev'; // Worker URL
         
         // 調試信息
         console.log('=== ChatApp 初始化 ===');
@@ -158,7 +158,7 @@ class ChatApp {
         }
     }
 
-    // Azure Translator 翻譯方法
+    // Google Cloud Translation 翻譯方法
     async translateToTraditionalChinese(text) {
         if (!text || !text.trim()) {
             return text;
@@ -174,23 +174,31 @@ class ChatApp {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    text: text,
-                    from: 'en',
-                    to: 'zh-Hant'
+                    q: text,           // Google Cloud Translation 使用 'q' 參數
+                    target: 'zh-TW',   // 繁體中文的 ISO-639 代碼
+                    source: 'en'       // 來源語言（可選，API 會自動檢測）
                 })
             });
 
             if (!response.ok) {
+                const errorText = await response.text();
                 console.error('❌ 翻譯 API 回應錯誤:', response.status, response.statusText);
+                console.error('❌ 錯誤詳情:', errorText);
                 return text; // 如果翻譯失敗，返回原文
             }
 
             const result = await response.json();
+            console.log('🔍 翻譯 API 完整回應:', result);
             
-            if (result.translatedText) {
+            if (result.data && result.data.translations && result.data.translations[0]) {
+                const translatedText = result.data.translations[0].translatedText;
                 console.log('✅ 翻譯成功');
-                console.log('譯文長度:', result.translatedText.length);
-                return result.translatedText;
+                console.log('譯文長度:', translatedText.length);
+                return translatedText;
+            } else if (result.error) {
+                console.error('❌ 翻譯 API 錯誤:', result.error);
+                console.error('❌ 錯誤詳情:', result.details || 'No details');
+                return text;
             } else {
                 console.error('❌ 翻譯回應格式錯誤:', result);
                 return text;
