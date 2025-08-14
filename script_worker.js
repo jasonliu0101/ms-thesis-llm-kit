@@ -858,6 +858,16 @@ class ChatApp {
         formatted = this.escapeHtml(formatted);
         formatted = formatted.replace(/\n/g, '<br>');
         
+        // 處理 Markdown 格式 - 在其他格式處理之前
+        // 處理粗體文字 **text**
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // 處理斜體文字 *text*
+        formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // 處理代碼段 `code`
+        formatted = formatted.replace(/`([^`]+)`/g, '<code style="background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>');
+        
         // 處理數字列表
         formatted = formatted.replace(/(\d+)\.\s/g, '<strong>$1.</strong> ');
         
@@ -880,11 +890,15 @@ class ChatApp {
         formatted = this.escapeHtml(formatted);
         formatted = formatted.replace(/\n/g, '<br>');
         
-        // 處理粗體文字
+        // 處理 Markdown 格式
+        // 處理粗體文字 **text**
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         
-        // 處理斜體文字
+        // 處理斜體文字 *text*
         formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // 處理代碼段 `code`
+        formatted = formatted.replace(/`([^`]+)`/g, '<code style="background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>');
         
         // 處理標題（以冒號結尾）
         formatted = formatted.replace(/^([^<\n]+：)/gm, '<strong style="color: #2c3e50;">$1</strong>');
