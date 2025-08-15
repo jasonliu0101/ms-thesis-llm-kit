@@ -885,6 +885,10 @@ class ChatApp {
         // 先處理粗體文字 **text** - 在處理斜體之前
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<!BOLD!>$1<!ENDBOLD!>');
         
+        // 先保護項目符號列表的星號 (行首或<br>後的 * 空格)
+        formatted = formatted.replace(/^(\s*)\*\s/gm, '$1<!LISTBULLET!> ');
+        formatted = formatted.replace(/(<br>)(\s*)\*\s/g, '$1$2<!LISTBULLET!> ');
+        
         // 移除斜體格式 *text* - 只保留文字內容
         formatted = formatted.replace(/\*(.*?)\*/g, '$1');
 
@@ -905,8 +909,9 @@ class ChatApp {
         // 處理數字列表
         formatted = formatted.replace(/(\d+)\.\s/g, '<strong>$1.</strong> ');
         
-        // 處理項目符號列表
+        // 處理項目符號列表 (包括星號、橫線、圓點)
         formatted = formatted.replace(/^[-•]\s/gm, '<span style="color: #666;">•</span> ');
+        formatted = formatted.replace(/&lt;!LISTBULLET!&gt;/g, '<span style="color: #666;">•</span>');
         
         // 處理重要標題（以冒號結尾的行）
         formatted = formatted.replace(/^([^<\n]+：)/gm, '<strong style="color: #2c3e50;">$1</strong>');
@@ -927,6 +932,10 @@ class ChatApp {
         
         // 先處理粗體文字 **text** - 在處理斜體之前
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<!BOLD!>$1<!ENDBOLD!>');
+        
+        // 先保護項目符號列表的星號 (行首或<br>後的 * 空格)
+        formatted = formatted.replace(/^(\s*)\*\s/gm, '$1<!LISTBULLET!> ');
+        formatted = formatted.replace(/(<br>)(\s*)\*\s/g, '$1$2<!LISTBULLET!> ');
         
         // 移除斜體格式 *text* - 只保留文字內容
         formatted = formatted.replace(/\*(.*?)\*/g, '$1');
@@ -951,8 +960,9 @@ class ChatApp {
         // 處理數字列表
         formatted = formatted.replace(/^(\d+)\.\s/gm, '<strong>$1.</strong> ');
         
-        // 處理項目符號列表
+        // 處理項目符號列表 (包括星號、橫線、圓點)
         formatted = formatted.replace(/^[-•]\s/gm, '<span style="color: #666;">•</span> ');
+        formatted = formatted.replace(/&lt;!LISTBULLET!&gt;/g, '<span style="color: #666;">•</span>');
         
         // 處理引用註腳（只在引用來源會被顯示時才添加）
         if (shouldShowReferences && groundingData && groundingData.groundingSupports) {
