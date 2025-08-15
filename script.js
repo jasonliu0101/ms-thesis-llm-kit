@@ -114,30 +114,39 @@ class ChatApp {
 
     startCountdown(button) {
         let timeLeft = 10;
-        const originalText = button.innerHTML;
         
         console.log('⏰ 開始十秒倒數計時');
         
-        // 初始設定按鈕狀態
+        // 初始設定按鈕狀態 - 移除 inline styles 讓 CSS 生效
         button.disabled = true;
-        button.style.cursor = 'not-allowed';
-        button.style.opacity = '0.6';
+        button.style.cursor = '';
+        button.style.opacity = '';
         
-        const countdown = setInterval(() => {
+        // 立即顯示初始時間
+        const updateDisplay = () => {
             const btnText = document.getElementById('startBtnText');
             if (btnText) {
                 btnText.textContent = `請先閱讀說明 (${timeLeft}秒)`;
             }
-            
+        };
+        
+        // 立即更新顯示
+        updateDisplay();
+        
+        const countdown = setInterval(() => {
             timeLeft--;
+            
+            if (timeLeft >= 0) {
+                updateDisplay();
+            }
             
             if (timeLeft < 0) {
                 clearInterval(countdown);
                 
-                // 啟用按鈕
+                // 啟用按鈕 - 移除 inline styles
                 button.disabled = false;
-                button.style.cursor = 'pointer';
-                button.style.opacity = '1';
+                button.style.cursor = '';
+                button.style.opacity = '';
                 button.innerHTML = '<i class="fas fa-play"></i><span>開始使用系統</span>';
                 
                 // 添加事件監聽器
