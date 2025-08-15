@@ -35,6 +35,42 @@ class ChatApp {
         return `session-${timestamp}-${randomStr}`;
     }
 
+    generateSessionCode(data) {
+        // 第一位：判斷是否來自例題
+        let digit1 = '0'; // 預設不是例題
+        const currentQuestion = data.originalQuestion || '';
+        if (currentQuestion) {
+            // 檢查是否是例題
+            const exampleQuestions = [
+                "如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？", // 例題1
+                "鄰居的狗經常在夜間吠叫影響睡眠，我可以採取什麼法律行動？", // 例題2
+                "我在網路上購買商品但收到假貨，賣家拒絕退款怎麼辦？" // 例題3
+            ];
+            
+            for (let i = 0; i < exampleQuestions.length; i++) {
+                if (currentQuestion.includes(exampleQuestions[i]) || exampleQuestions[i].includes(currentQuestion)) {
+                    digit1 = (i + 1).toString();
+                    break;
+                }
+            }
+        }
+
+        // 第二位：0到4隨機
+        const digit2 = Math.floor(Math.random() * 5).toString();
+
+        // 第三位：判斷是否開啟思考流程
+        const digit3 = (this.showThinkingCheckbox.checked && data.thinking) ? '1' : '0';
+
+        // 第四位：5到9隨機
+        const digit4 = (Math.floor(Math.random() * 5) + 5).toString();
+
+        // 第五、六位：引用數量（00-99）
+        const referenceCount = (data.references && data.references.length) ? data.references.length : 0;
+        const digits56 = referenceCount.toString().padStart(2, '0');
+
+        return digit1 + digit2 + digit3 + digit4 + digits56;
+    }
+
     showWelcomeModal() {
         // 檢查是否已經顯示過歡迎頁面（可以使用 sessionStorage）
         const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
@@ -112,6 +148,21 @@ class ChatApp {
         }
     }
 
+    copySessionCode(code) {
+        // 使用 Clipboard API 複製識別碼
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(code).then(() => {
+                this.showCodeCopyFeedback();
+            }).catch(err => {
+                console.error('複製失敗:', err);
+                this.fallbackCopyText(code);
+            });
+        } else {
+            // 備用複製方法
+            this.fallbackCopyText(code);
+        }
+    }
+
     fallbackCopyText(text, button) {
         const textArea = document.createElement('textarea');
         textArea.value = text;
@@ -141,6 +192,23 @@ class ChatApp {
             button.innerHTML = originalHTML;
             button.style.background = '';
         }, 1500);
+    }
+
+    showCodeCopyFeedback() {
+        // 顯示識別碼複製成功的反饋
+        const button = document.querySelector('.copy-session-btn');
+        if (button) {
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            button.style.background = '#4caf50';
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.style.background = '';
+            }, 2000);
+        }
+        
+        console.log('✅ 識別碼已複製到剪貼板');
     }
 
     detectWorkerUrl() {
@@ -1167,6 +1235,9 @@ class ChatApp {
 
         // 第一次回覆後顯示識別碼
         if (!this.hasShownSessionId) {
+            // 生成動態識別碼
+            const sessionCode = this.generateSessionCode(data);
+            
             responseHtml += `
                 <div class="session-id-display">
                     <div class="session-id-header">
@@ -1175,8 +1246,8 @@ class ChatApp {
                     </div>
                     <div class="session-id-content">
                         <div class="session-id-value">
-                            <span class="session-id-text">${this.sessionId}</span>
-                            <button class="copy-session-btn" onclick="window.chatApp.copySessionIdInChat(this)" title="複製識別碼">
+                            <span class="session-id-text">${sessionCode}</span>
+                            <button class="copy-session-btn" onclick="window.chatApp.copySessionCode('${sessionCode}')" title="複製識別碼">
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
@@ -1236,19 +1307,24 @@ class ChatApp {
         // 移除任何剩餘的 <thinking> 標籤
         formatted = formatted.replace(/<\/?thinking>/g, '');
 
+        // 處理 Markdown 格式 - 在轉換 HTML 之前先處理
+        // 移除 Markdown 標題 ### ## #（包括行首和 <br> 後的）
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        formatted = formatted.replace(/(<br>)#{1,6}\s*/g, '$1');
+        
+        // 移除斜體格式 *text* - 只保留文字內容
+        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
+
         // 轉換為安全的 HTML
         formatted = this.escapeHtml(formatted);
         formatted = formatted.replace(/\n/g, '<br>');
         
-        // 處理 Markdown 格式 - 移除標題和斜體
-        // 移除 Markdown 標題 ### ## #
+        // 再次處理可能殘留的標題符號（針對轉換後的內容）
+        formatted = formatted.replace(/<br>\s*#{1,6}\s*/g, '<br>');
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         
         // 處理粗體文字 **text** - 保留
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        // 移除斜體格式 *text* - 只保留文字內容
-        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
         
         // 處理數字列表
         formatted = formatted.replace(/(\d+)\.\s/g, '<strong>$1.</strong> ');
@@ -1268,19 +1344,24 @@ class ChatApp {
         // 移除任何 <thinking> 標籤（如果意外包含在回答中）
         let formatted = response.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
         
+        // 處理 Markdown 格式 - 在轉換 HTML 之前先處理
+        // 移除 Markdown 標題 ### ## #（包括行首和 <br> 後的）
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        formatted = formatted.replace(/(<br>)#{1,6}\s*/g, '$1');
+        
+        // 移除斜體格式 *text* - 只保留文字內容
+        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
+        
         // 轉換為安全的 HTML
         formatted = this.escapeHtml(formatted);
         formatted = formatted.replace(/\n/g, '<br>');
         
-        // 處理 Markdown 格式 - 移除標題和斜體
-        // 移除 Markdown 標題 ### ## #
+        // 再次處理可能殘留的標題符號（針對轉換後的內容）
+        formatted = formatted.replace(/<br>\s*#{1,6}\s*/g, '<br>');
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         
         // 處理粗體文字 - 保留
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        // 移除斜體格式 *text* - 只保留文字內容
-        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
         
         // 處理標題（以冒號結尾）
         formatted = formatted.replace(/^([^<\n]+：)/gm, '<strong style="color: #2c3e50;">$1</strong>');

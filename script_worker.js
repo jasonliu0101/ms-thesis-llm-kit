@@ -52,14 +52,14 @@ class ChatApp {
             }
         }
 
-        // 第二位：0到9隨機
-        const digit2 = Math.floor(Math.random() * 10).toString();
+        // 第二位：0到4隨機
+        const digit2 = Math.floor(Math.random() * 5).toString();
 
         // 第三位：判斷是否開啟思考流程
         const digit3 = (this.showThinkingCheckbox.checked && data.thinking) ? '1' : '0';
 
-        // 第四位：0到9隨機
-        const digit4 = Math.floor(Math.random() * 10).toString();
+        // 第四位：5到9隨機
+        const digit4 = (Math.floor(Math.random() * 5) + 5).toString();
 
         // 第五、六位：引用數量（00-99）
         const referenceCount = (data.references && data.references.length) ? data.references.length : 0;
@@ -859,19 +859,24 @@ class ChatApp {
         // 移除任何剩餘的 <thinking> 標籤
         formatted = formatted.replace(/<\/?thinking>/g, '');
 
+        // 處理 Markdown 格式 - 在轉換 HTML 之前先處理
+        // 移除 Markdown 標題 ### ## #（包括行首和 <br> 後的）
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        formatted = formatted.replace(/(<br>)#{1,6}\s*/g, '$1');
+        
+        // 移除斜體格式 *text* - 只保留文字內容
+        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
+
         // 轉換為安全的 HTML
         formatted = this.escapeHtml(formatted);
         formatted = formatted.replace(/\n/g, '<br>');
         
-        // 處理 Markdown 格式 - 移除標題和斜體
-        // 移除 Markdown 標題 ### ## #
+        // 再次處理可能殘留的標題符號（針對轉換後的內容）
+        formatted = formatted.replace(/<br>\s*#{1,6}\s*/g, '<br>');
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         
         // 處理粗體文字 **text** - 保留
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        // 移除斜體格式 *text* - 只保留文字內容
-        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
         
         // 處理代碼段 `code`
         formatted = formatted.replace(/`([^`]+)`/g, '<code style="background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>');
@@ -894,19 +899,24 @@ class ChatApp {
         // 移除任何 <thinking> 標籤（如果意外包含在回答中）
         let formatted = response.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
         
+        // 處理 Markdown 格式 - 在轉換 HTML 之前先處理
+        // 移除 Markdown 標題 ### ## #（包括行首和 <br> 後的）
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        formatted = formatted.replace(/(<br>)#{1,6}\s*/g, '$1');
+        
+        // 移除斜體格式 *text* - 只保留文字內容
+        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
+        
         // 轉換為安全的 HTML
         formatted = this.escapeHtml(formatted);
         formatted = formatted.replace(/\n/g, '<br>');
         
-        // 處理 Markdown 格式 - 移除標題和斜體
-        // 移除 Markdown 標題 ### ## #
+        // 再次處理可能殘留的標題符號（針對轉換後的內容）
+        formatted = formatted.replace(/<br>\s*#{1,6}\s*/g, '<br>');
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         
         // 處理粗體文字 **text** - 保留
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        // 移除斜體格式 *text* - 只保留文字內容
-        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
         
         // 處理代碼段 `code`
         formatted = formatted.replace(/`([^`]+)`/g, '<code style="background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>');
