@@ -150,11 +150,11 @@ class ChatApp {
         const countdown = setInterval(() => {
             timeLeft--;
             
-            if (timeLeft >= 0) {
+            if (timeLeft > 0) {
                 updateDisplay();
             }
             
-            if (timeLeft < 0) {
+            if (timeLeft <= 0) {
                 clearInterval(countdown);
                 
                 // 啟用按鈕 - 移除 inline styles
