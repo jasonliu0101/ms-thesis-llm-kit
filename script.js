@@ -84,9 +84,8 @@ class ChatApp {
                 // 綁定開始按鈕事件
                 const startButton = document.getElementById('startSystemBtn');
                 if (startButton) {
-                    startButton.addEventListener('click', () => {
-                        this.hideWelcomeModal();
-                    });
+                    // 開始十秒倒數計時
+                    this.startCountdown(startButton);
                 }
                 
                 // 點擊背景關閉模態框
@@ -111,6 +110,47 @@ class ChatApp {
                 modal.style.display = 'none';
             }, 300);
         }
+    }
+
+    startCountdown(button) {
+        let timeLeft = 10;
+        const originalText = button.innerHTML;
+        
+        console.log('⏰ 開始十秒倒數計時');
+        
+        // 初始設定按鈕狀態
+        button.disabled = true;
+        button.style.cursor = 'not-allowed';
+        button.style.opacity = '0.6';
+        
+        const countdown = setInterval(() => {
+            const btnText = document.getElementById('startBtnText');
+            if (btnText) {
+                btnText.textContent = `請先閱讀說明 (${timeLeft}秒)`;
+            }
+            
+            timeLeft--;
+            
+            if (timeLeft < 0) {
+                clearInterval(countdown);
+                
+                // 啟用按鈕
+                button.disabled = false;
+                button.style.cursor = 'pointer';
+                button.style.opacity = '1';
+                button.innerHTML = '<i class="fas fa-play"></i><span>開始使用系統</span>';
+                
+                // 添加事件監聽器
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🖱️ 開始按鈕被點擊');
+                    this.hideWelcomeModal();
+                });
+                
+                console.log('✅ 倒數計時完成，按鈕已啟用');
+            }
+        }, 1000);
     }
 
     copySessionId() {

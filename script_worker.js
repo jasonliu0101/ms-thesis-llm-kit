@@ -97,40 +97,8 @@ class ChatApp {
             console.log('🔘 找到開始按鈕:', !!startButton);
             
             if (startButton) {
-                // 移除之前可能存在的事件監聽器
-                startButton.replaceWith(startButton.cloneNode(true));
-                const newStartButton = document.getElementById('startSystemBtn');
-                
-                newStartButton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('🖱️ 開始按鈕被點擊');
-                    this.hideWelcomeModal();
-                });
-                console.log('✅ 開始按鈕事件已綁定');
-            }
-            
-            // 清除並重新綁定背景點擊事件
-            const newModal = document.getElementById('researchWelcomeModal');
-            newModal.replaceWith(newModal.cloneNode(true));
-            const refreshedModal = document.getElementById('researchWelcomeModal');
-            
-            refreshedModal.addEventListener('click', (e) => {
-                if (e.target === refreshedModal) {
-                    console.log('🖱️ 背景被點擊，關閉模態框');
-                    this.hideWelcomeModal();
-                }
-            });
-            
-            // 重新綁定開始按鈕（因為 modal 被重新創建）
-            const finalStartButton = document.getElementById('startSystemBtn');
-            if (finalStartButton) {
-                finalStartButton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('🖱️ 開始按鈕被點擊（最終版本）');
-                    this.hideWelcomeModal();
-                });
+                // 開始十秒倒數計時
+                this.startCountdown(startButton);
             }
         } else {
             console.error('❌ 找不到模態框元素 #researchWelcomeModal');
@@ -156,6 +124,47 @@ class ChatApp {
         } else {
             console.error('❌ 找不到模態框元素進行關閉');
         }
+    }
+
+    startCountdown(button) {
+        let timeLeft = 10;
+        const originalText = button.innerHTML;
+        
+        console.log('⏰ 開始十秒倒數計時');
+        
+        // 初始設定按鈕狀態
+        button.disabled = true;
+        button.style.cursor = 'not-allowed';
+        button.style.opacity = '0.6';
+        
+        const countdown = setInterval(() => {
+            const btnText = document.getElementById('startBtnText');
+            if (btnText) {
+                btnText.textContent = `請先閱讀說明 (${timeLeft}秒)`;
+            }
+            
+            timeLeft--;
+            
+            if (timeLeft < 0) {
+                clearInterval(countdown);
+                
+                // 啟用按鈕
+                button.disabled = false;
+                button.style.cursor = 'pointer';
+                button.style.opacity = '1';
+                button.innerHTML = '<i class="fas fa-play"></i><span>開始使用系統</span>';
+                
+                // 添加事件監聽器
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🖱️ 開始按鈕被點擊');
+                    this.hideWelcomeModal();
+                });
+                
+                console.log('✅ 倒數計時完成，按鈕已啟用');
+            }
+        }, 1000);
     }
 
     // Google Cloud Translation 翻譯方法
