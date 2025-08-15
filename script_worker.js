@@ -830,7 +830,7 @@ class ChatApp {
                     <span class="code-label">識別碼：</span>
                     <span class="session-code-text">${sessionCode}</span>
                     <button class="copy-code-btn" onclick="window.chatApp.copySessionCode('${sessionCode}')" title="複製識別碼">
-                        <i class="fas fa-copy" aria-hidden="true"></i>
+                        <i class="fas fa-copy"></i>
                         <span class="copy-btn-text">複製識別碼</span>
                     </button>
                 </div>
@@ -1162,12 +1162,22 @@ class ChatApp {
         // 顯示識別碼複製成功的反饋
         const button = document.querySelector('.copy-code-btn');
         if (button) {
-            const originalIcon = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-check"></i>';
+            const iconElement = button.querySelector('i');
+            const textElement = button.querySelector('.copy-btn-text');
+            
+            // 保存原始內容
+            const originalIconClass = iconElement.className;
+            const originalText = textElement.textContent;
+            
+            // 更改為已複製狀態
+            iconElement.className = 'fas fa-check';
+            textElement.textContent = '已複製';
             button.style.backgroundColor = '#4caf50';
             
             setTimeout(() => {
-                button.innerHTML = originalIcon;
+                // 恢復原始狀態
+                iconElement.className = originalIconClass;
+                textElement.textContent = originalText;
                 button.style.backgroundColor = '';
             }, 2000);
         }

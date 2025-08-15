@@ -247,12 +247,18 @@ class ChatApp {
         // 顯示識別碼複製成功的反饋
         const button = document.querySelector('.copy-session-btn');
         if (button) {
-            const originalHTML = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-check"></i>';
+            const iconElement = button.querySelector('i');
+            
+            // 保存原始類別
+            const originalIconClass = iconElement.className;
+            
+            // 更改為已複製狀態
+            iconElement.className = 'fas fa-check';
             button.style.background = '#4caf50';
             
             setTimeout(() => {
-                button.innerHTML = originalHTML;
+                // 恢復原始狀態
+                iconElement.className = originalIconClass;
                 button.style.background = '';
             }, 2000);
         }
