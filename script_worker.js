@@ -882,6 +882,9 @@ class ChatApp {
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         formatted = formatted.replace(/(<br>)#{1,6}\s*/g, '$1');
         
+        // 先處理粗體文字 **text** - 在處理斜體之前
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<!BOLD!>$1<!ENDBOLD!>');
+        
         // 移除斜體格式 *text* - 只保留文字內容
         formatted = formatted.replace(/\*(.*?)\*/g, '$1');
 
@@ -893,8 +896,8 @@ class ChatApp {
         formatted = formatted.replace(/<br>\s*#{1,6}\s*/g, '<br>');
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         
-        // 處理粗體文字 **text** - 保留
-        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // 恢復粗體文字標記
+        formatted = formatted.replace(/&lt;!BOLD!&gt;(.*?)&lt;!ENDBOLD!&gt;/g, '<strong>$1</strong>');
         
         // 處理代碼段 `code`
         formatted = formatted.replace(/`([^`]+)`/g, '<code style="background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>');
@@ -922,6 +925,9 @@ class ChatApp {
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         formatted = formatted.replace(/(<br>)#{1,6}\s*/g, '$1');
         
+        // 先處理粗體文字 **text** - 在處理斜體之前
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<!BOLD!>$1<!ENDBOLD!>');
+        
         // 移除斜體格式 *text* - 只保留文字內容
         formatted = formatted.replace(/\*(.*?)\*/g, '$1');
         
@@ -933,8 +939,8 @@ class ChatApp {
         formatted = formatted.replace(/<br>\s*#{1,6}\s*/g, '<br>');
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         
-        // 處理粗體文字 **text** - 保留
-        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // 恢復粗體文字標記
+        formatted = formatted.replace(/&lt;!BOLD!&gt;(.*?)&lt;!ENDBOLD!&gt;/g, '<strong>$1</strong>');
         
         // 處理代碼段 `code`
         formatted = formatted.replace(/`([^`]+)`/g, '<code style="background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>');

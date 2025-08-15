@@ -1361,6 +1361,9 @@ class ChatApp {
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         formatted = formatted.replace(/(<br>)#{1,6}\s*/g, '$1');
         
+        // 先處理粗體文字 **text** - 在處理斜體之前
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<!BOLD!>$1<!ENDBOLD!>');
+        
         // 移除斜體格式 *text* - 只保留文字內容
         formatted = formatted.replace(/\*(.*?)\*/g, '$1');
 
@@ -1372,8 +1375,8 @@ class ChatApp {
         formatted = formatted.replace(/<br>\s*#{1,6}\s*/g, '<br>');
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         
-        // 處理粗體文字 **text** - 保留
-        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // 恢復粗體文字標記
+        formatted = formatted.replace(/&lt;!BOLD!&gt;(.*?)&lt;!ENDBOLD!&gt;/g, '<strong>$1</strong>');
         
         // 處理數字列表
         formatted = formatted.replace(/(\d+)\.\s/g, '<strong>$1.</strong> ');
@@ -1398,6 +1401,9 @@ class ChatApp {
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         formatted = formatted.replace(/(<br>)#{1,6}\s*/g, '$1');
         
+        // 先處理粗體文字 **text** - 在處理斜體之前
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<!BOLD!>$1<!ENDBOLD!>');
+        
         // 移除斜體格式 *text* - 只保留文字內容
         formatted = formatted.replace(/\*(.*?)\*/g, '$1');
         
@@ -1409,8 +1415,8 @@ class ChatApp {
         formatted = formatted.replace(/<br>\s*#{1,6}\s*/g, '<br>');
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
         
-        // 處理粗體文字 - 保留
-        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // 恢復粗體文字標記
+        formatted = formatted.replace(/&lt;!BOLD!&gt;(.*?)&lt;!ENDBOLD!&gt;/g, '<strong>$1</strong>');
         
         // 處理標題（以冒號結尾）
         formatted = formatted.replace(/^([^<\n]+：)/gm, '<strong style="color: #2c3e50;">$1</strong>');
