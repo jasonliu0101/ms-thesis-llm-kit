@@ -201,11 +201,11 @@ class ChatApp {
         }
     }
 
-    copySessionCode(code) {
+    copySessionCode(code, buttonElement) {
         // 使用 Clipboard API 複製識別碼
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(code).then(() => {
-                this.showCodeCopyFeedback();
+                this.showCodeCopyFeedback(buttonElement);
             }).catch(err => {
                 console.error('複製失敗:', err);
                 this.fallbackCopyText(code);
@@ -247,9 +247,9 @@ class ChatApp {
         }, 1500);
     }
 
-    showCodeCopyFeedback() {
+    showCodeCopyFeedback(buttonElement) {
         // 顯示識別碼複製成功的反饋
-        const button = document.querySelector('.copy-session-btn');
+        const button = buttonElement || document.querySelector('.copy-session-btn');
         if (button) {
             const iconElement = button.querySelector('i');
             
@@ -1310,7 +1310,7 @@ class ChatApp {
                     <div class="session-id-content">
                         <div class="session-id-value">
                             <span class="session-id-text">${sessionCode}</span>
-                            <button class="copy-session-btn" onclick="window.chatApp.copySessionCode('${sessionCode}')" title="複製識別碼">
+                            <button class="copy-session-btn" id="copy-btn-${sessionCode}" onclick="window.chatApp.copySessionCode('${sessionCode}', this)" title="複製識別碼">
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>

@@ -847,7 +847,7 @@ class ChatApp {
                     <i class="fas fa-id-card"></i>
                     <span class="code-label">識別碼：</span>
                     <span class="session-code-text">${sessionCode}</span>
-                    <button class="copy-code-btn" onclick="window.chatApp.copySessionCode('${sessionCode}')" title="複製識別碼">
+                    <button class="copy-code-btn" id="copy-btn-${sessionCode}" onclick="window.chatApp.copySessionCode('${sessionCode}', this)" title="複製識別碼">
                         <i class="fas fa-copy"></i>
                         <span class="copy-btn-text">複製識別碼</span>
                     </button>
@@ -1133,11 +1133,11 @@ class ChatApp {
         }
     }
 
-    copySessionCode(code) {
+    copySessionCode(code, buttonElement) {
         // 使用 Clipboard API 複製識別碼
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(code).then(() => {
-                this.showCodeCopyFeedback();
+                this.showCodeCopyFeedback(buttonElement);
             }).catch(err => {
                 console.error('複製失敗:', err);
                 this.fallbackCopyText(code);
@@ -1186,9 +1186,9 @@ class ChatApp {
         console.log('✅ 識別碼已複製到剪貼板');
     }
 
-    showCodeCopyFeedback() {
+    showCodeCopyFeedback(buttonElement) {
         // 顯示識別碼複製成功的反饋
-        const button = document.querySelector('.copy-code-btn');
+        const button = buttonElement || document.querySelector('.copy-code-btn');
         if (button) {
             const iconElement = button.querySelector('i');
             const textElement = button.querySelector('.copy-btn-text');
