@@ -36,20 +36,24 @@ class ChatApp {
         // 第一位：判斷是否來自例題
         let digit1 = '0'; // 預設不是例題
         const currentQuestion = data.originalQuestion || '';
-        if (currentQuestion) {
-            // 檢查是否是例題
-            const exampleQuestions = [
-                "如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？", // 例題1
-                "鄰居的狗經常在夜間吠叫影響睡眠，我可以採取什麼法律行動？", // 例題2
-                "我在網路上購買商品但收到假貨，賣家拒絕退款怎麼辦？" // 例題3
-            ];
-            
-            for (let i = 0; i < exampleQuestions.length; i++) {
-                if (currentQuestion.includes(exampleQuestions[i]) || exampleQuestions[i].includes(currentQuestion)) {
-                    digit1 = (i + 1).toString();
-                    break;
+        
+        if (currentQuestion && this.selectedExampleQuestion) {
+            // 檢查當前問題是否與選擇的範例問題完全相同
+            if (currentQuestion === this.selectedExampleQuestion) {
+                const exampleQuestions = [
+                    "如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？", // 例題1
+                    "鄰居的狗經常在夜間吠叫影響睡眠，我可以採取什麼法律行動？", // 例題2
+                    "我在網路上購買商品但收到假貨，賣家拒絕退款怎麼辦？" // 例題3
+                ];
+                
+                for (let i = 0; i < exampleQuestions.length; i++) {
+                    if (currentQuestion === exampleQuestions[i]) {
+                        digit1 = (i + 1).toString();
+                        break;
+                    }
                 }
             }
+            // 如果問題已被修改（不等於原始範例問題），digit1保持為'0'
         }
 
         // 第二位：0到4隨機
@@ -243,6 +247,9 @@ class ChatApp {
         this.settingsToggle = document.getElementById('settingsToggle');
         this.settingsPanel = document.getElementById('settingsPanel');
         
+        // 追蹤範例問題選擇
+        this.selectedExampleQuestion = null;
+        
         // 檢查關鍵元素是否存在
         const requiredElements = [
             'chatContainer', 'questionInput', 'sendButton', 'settingsToggle',
@@ -298,6 +305,16 @@ class ChatApp {
             this.questionInput.addEventListener('input', () => {
                 this.updateSendButtonState();
                 this.autoResizeTextarea();
+                
+                // 如果用戶修改了問題內容，檢查是否仍與選擇的範例問題相同
+                if (this.selectedExampleQuestion) {
+                    const currentValue = this.questionInput.value.trim();
+                    if (currentValue !== this.selectedExampleQuestion && currentValue !== '') {
+                        // 用戶已修改問題，清除範例問題選擇標記
+                        // 但不要立即清除，因為我們在識別碼生成時需要檢查
+                        // this.selectedExampleQuestion = null;
+                    }
+                }
             });
         }
 
@@ -315,6 +332,7 @@ class ChatApp {
             btn.addEventListener('click', (e) => {
                 const question = e.currentTarget.getAttribute('data-question');
                 this.questionInput.value = question;
+                this.selectedExampleQuestion = question; // 記錄選擇的範例問題
                 this.updateSendButtonState();
                 this.autoResizeTextarea();
                 // 移除自動發送，只填入輸入欄
