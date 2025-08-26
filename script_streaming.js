@@ -312,11 +312,14 @@ class StreamingChatApp {
                                     break;
                                 case 'thinking_chunk':
                                     if (thinkingContainer && this.showThinkingCheckbox?.checked) {
-                                        this.appendToContainer(thinkingContainer, payload.content);
+                                        // 翻譯思考內容為中文
+                                        this.translateAndAppendThinking(thinkingContainer, payload.content);
                                     }
                                     break;
                                 case 'thinking_end':
-                                    answerContainer = this.createAnswerContainer(responseDiv);
+                                    // 思考結束後，呼叫完整的 API 獲取答案和引用
+                                    this.fetchCompleteAnswer(question, responseDiv);
+                                    shouldStop = true; // 串流結束，改用完整 API
                                     break;
                                 case 'answer_start':
                                     if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
@@ -345,11 +348,27 @@ class StreamingChatApp {
                         } else {
                             // 否則視為「Gemini 原生 SSE」事件
                             const didAppend = this.handleGeminiPayload(payload, {
+                                ensureThinkingContainer: () => {
+                                    if (!thinkingContainer) thinkingContainer = this.createThinkingContainer(responseDiv);
+                                    return thinkingContainer;
+                                },
                                 ensureAnswerContainer: () => {
                                     if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
                                     return answerContainer;
                                 },
                                 showThinking: !!(this.showThinkingCheckbox && this.showThinkingCheckbox.checked),
+                                onThinkingContent: (content) => {
+                                    // 確保思考容器存在，然後翻譯思考內容
+                                    if (!thinkingContainer) thinkingContainer = this.createThinkingContainer(responseDiv);
+                                    if (this.showThinkingCheckbox?.checked) {
+                                        this.translateAndAppendThinking(thinkingContainer, content);
+                                    }
+                                },
+                                onThinkingEnd: () => {
+                                    // 思考結束，呼叫完整 API
+                                    this.fetchCompleteAnswer(question, responseDiv);
+                                    shouldStop = true;
+                                }
                             });
 
                             // 依需要也可以這裡觀察安全性封鎖/回饋等
@@ -562,21 +581,23 @@ class StreamingChatApp {
 
             // 先嘗試 delta（增量）
             if (cand.delta && Array.isArray(cand.delta.parts)) {
-                return cand.delta.parts
-                    .map(p => (p && typeof p.text === 'string') ? p.text : '')
-                    .filter(Boolean);
+                return cand.delta.parts.map(p => ({
+                    text: (p && typeof p.text === 'string') ? p.text : '',
+                    thought: p.thought === true
+                })).filter(p => p.text);
             }
 
             // 再嘗試 content（完整/分段）
             if (cand.content && Array.isArray(cand.content.parts)) {
-                return cand.content.parts
-                    .map(p => (p && typeof p.text === 'string') ? p.text : '')
-                    .filter(Boolean);
+                return cand.content.parts.map(p => ({
+                    text: (p && typeof p.text === 'string') ? p.text : '',
+                    thought: p.thought === true
+                })).filter(p => p.text);
             }
 
             // 有些情況 text 可能直接掛在 cand.text（備援）
             if (typeof cand.text === 'string' && cand.text) {
-                return [cand.text];
+                return [{ text: cand.text, thought: false }];
             }
 
             return [];
@@ -588,11 +609,124 @@ class StreamingChatApp {
             return false;
         }
 
-        const answerContainer = ctx.ensureAnswerContainer();
-        for (const t of pieces) {
-            this.appendToContainer(answerContainer, t);
+        let hasThinking = false;
+        let hasAnswer = false;
+
+        for (const piece of pieces) {
+            if (piece.thought && ctx.showThinking) {
+                // 思考內容
+                hasThinking = true;
+                if (ctx.onThinkingContent) {
+                    ctx.onThinkingContent(piece.text);
+                }
+            } else if (!piece.thought) {
+                // 答案內容 - 但在混合模式下我們跳過，因為會用完整 API
+                hasAnswer = true;
+            }
         }
-        return true;
+
+        // 如果從思考階段轉到答案階段
+        if (hasAnswer && hasThinking && ctx.onThinkingEnd) {
+            ctx.onThinkingEnd();
+        }
+
+        return hasThinking || hasAnswer;
+    }
+
+    async translateAndAppendThinking(container, content) {
+        // 直接顯示英文內容（即時）
+        this.appendToContainer(container, content);
+        
+        try {
+            // 非同步翻譯為中文
+            const translatedContent = await this.translateText(content);
+            if (translatedContent && translatedContent !== content) {
+                // 替換為中文內容
+                const lastContentIndex = container.innerHTML.lastIndexOf(this.escapeHtml(content));
+                if (lastContentIndex !== -1) {
+                    container.innerHTML = container.innerHTML.substring(0, lastContentIndex) + 
+                                        this.escapeHtml(translatedContent) + 
+                                        container.innerHTML.substring(lastContentIndex + this.escapeHtml(content).length);
+                    this.scrollToBottom();
+                }
+            }
+        } catch (error) {
+            console.warn('翻譯思考內容失敗:', error);
+            // 翻譯失敗時保留英文內容
+        }
+    }
+
+    async translateText(text) {
+        try {
+            const response = await fetch(`${this.workerUrl}/translate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text,
+                    targetLanguage: 'zh-TW'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`翻譯請求失敗: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result.translatedText || text;
+        } catch (error) {
+            console.warn('翻譯請求錯誤:', error);
+            return text; // 翻譯失敗時返回原文
+        }
+    }
+
+    async fetchCompleteAnswer(question, responseDiv) {
+        try {
+            // 創建答案容器
+            const answerContainer = this.createAnswerContainer(responseDiv);
+            
+            // 呼叫完整的 API（與 Case A/B 相同）
+            const response = await fetch(`${this.workerUrl}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    question: question,
+                    enableSearch: !!(this.enableSearchCheckbox && this.enableSearchCheckbox.checked),
+                    sessionId: this.sessionId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            
+            // 顯示完整答案
+            if (result.answer) {
+                this.appendToContainer(answerContainer, result.answer);
+            }
+
+            // 顯示引用來源
+            if (result.references && result.references.length > 0) {
+                this.createReferencesContainer(responseDiv, result.references);
+            }
+
+            // 生成並顯示識別碼
+            const code = this.generateSessionCode({
+                originalQuestion: question,
+                thinking: this.showThinkingCheckbox?.checked,
+                references: result.references || []
+            });
+            this.showSessionCode(responseDiv, code);
+
+        } catch (error) {
+            console.error('完整答案請求錯誤:', error);
+            this.showErrorInResponse(responseDiv, `獲取完整答案時發生錯誤: ${error.message}`);
+        }
     }
 
     addErrorMessage(message) {
