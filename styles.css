@@ -2693,3 +2693,285 @@ sup {
         align-self: center;
     }
 }
+
+/* Streaming 相關樣式 */
+.streaming-notice {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border: 1px solid #2196f3;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 10px 0;
+    color: #1565c0;
+    font-style: italic;
+}
+
+.streaming-features {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.streaming-features .feature {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(102, 126, 234, 0.1);
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    color: #667eea;
+}
+
+.streaming-features .feature i {
+    font-size: 0.8rem;
+}
+
+/* 串流指示器 */
+.streaming-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    font-size: 0.9rem;
+}
+
+.streaming-indicator.complete {
+    color: #28a745;
+}
+
+.thinking-indicator, .answer-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    font-size: 0.8rem;
+}
+
+/* 思考流程樣式 */
+.thinking-section {
+    margin-bottom: 20px;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fafbfc;
+}
+
+.thinking-section .section-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 12px 15px;
+    border-bottom: 1px solid #e1e8ed;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.thinking-content {
+    padding: 15px;
+}
+
+.thinking-text {
+    color: #6c757d;
+    line-height: 1.6;
+    font-style: italic;
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid #6c757d;
+    white-space: pre-wrap;
+}
+
+/* 答案區域樣式 */
+.answer-section {
+    margin-bottom: 20px;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+}
+
+.answer-section .section-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.answer-content {
+    padding: 20px;
+}
+
+.answer-text {
+    color: #343a40;
+    line-height: 1.8;
+    white-space: pre-wrap;
+}
+
+/* 引用來源樣式增強 */
+.references-section {
+    margin-top: 20px;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.references-section .section-header {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.references-content {
+    padding: 15px;
+}
+
+.reference-item {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.reference-item:last-child {
+    margin-bottom: 0;
+}
+
+.reference-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.reference-header a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.reference-header a:hover {
+    text-decoration: underline;
+}
+
+.reference-snippet {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* 錯誤樣式 */
+.error-section {
+    margin-bottom: 20px;
+    border: 1px solid #dc3545;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8d7da;
+}
+
+.error-section .section-header {
+    background: #dc3545;
+    color: white;
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.error-content {
+    padding: 15px;
+    color: #721c24;
+}
+
+/* 識別碼區域增強 */
+.session-code-section {
+    margin-top: 20px;
+    border: 2px dashed #667eea;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 100%);
+}
+
+.session-code-header {
+    background: #667eea;
+    color: white;
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    border-radius: 6px 6px 0 0;
+}
+
+.session-code-content {
+    padding: 20px;
+    text-align: center;
+}
+
+.session-code {
+    font-family: 'Courier New', monospace;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #667eea;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid #667eea;
+    display: inline-block;
+    letter-spacing: 2px;
+}
+
+.session-note {
+    color: #495057;
+    margin-top: 12px;
+    font-style: italic;
+}
+
+/* 動畫效果 */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.thinking-section, .answer-section, .references-section {
+    animation: slideUp 0.3s ease-out;
+}
+
+/* 響應式調整 */
+@media (max-width: 768px) {
+    .streaming-features {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .session-code {
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+    }
+    
+    .thinking-content, .answer-content, .references-content {
+        padding: 12px;
+    }
+}

@@ -14,6 +14,8 @@ export default {
       return handleUserAssignment(request, env);
     } else if (path === '/translate' && request.method === 'POST') {
       return handleTranslateRequest(request, env);
+    } else if (path === '/stream-gemini' && request.method === 'POST') {
+      return handleStreamingGeminiRequest(request, env);
     } else if (path === '/' && request.method === 'POST') {
       return handleGeminiRequest(request, env);
     } else {
@@ -327,6 +329,324 @@ async function handleGeminiRequest(request, env) {
       headers: getCORSHeaders()
     });
   }
+}
+
+// 處理串流 Gemini API 請求
+async function handleStreamingGeminiRequest(request, env) {
+  try {
+    const { question, enableSearch, showThinking, sessionId } = await request.json();
+    
+    if (!question) {
+      return new Response(JSON.stringify({ error: 'Question is required' }), {
+        status: 400,
+        headers: getCORSHeaders()
+      });
+    }
+
+    console.log('📥 收到串流請求:', {
+      question: question.substring(0, 100) + '...',
+      enableSearch,
+      showThinking,
+      sessionId
+    });
+
+    // 檢查 API 金鑰
+    if (!env.GEMINI_API_KEY) {
+      return new Response(JSON.stringify({
+        error: 'Gemini API 服務不可用',
+        details: 'API 金鑰未設定'
+      }), {
+        status: 503,
+        headers: getCORSHeaders()
+      });
+    }
+
+    // 創建串流回應
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+
+    // 異步處理串流
+    (async () => {
+      try {
+        await processStreamingResponse(question, env, writer, encoder, {
+          enableSearch,
+          showThinking,
+          sessionId
+        });
+      } catch (error) {
+        console.error('串流處理錯誤:', error);
+        await writer.write(encoder.encode(`data: ${JSON.stringify({
+          type: 'error',
+          message: error.message
+        })}\n\n`));
+      } finally {
+        await writer.close();
+      }
+    })();
+
+    return new Response(readable, {
+      headers: {
+        ...getCORSHeaders(),
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
+    });
+
+  } catch (error) {
+    console.error('串流請求錯誤:', error);
+    return new Response(JSON.stringify({
+      error: 'Internal server error',
+      details: error.message
+    }), {
+      status: 500,
+      headers: getCORSHeaders()
+    });
+  }
+}
+
+// 處理串流回應的核心函數
+async function processStreamingResponse(question, env, writer, encoder, options) {
+  const { enableSearch = true, showThinking = true } = options;
+  
+  try {
+    // 調用 Gemini 串流 API
+    const response = await callStreamingGeminiAPI(question, env, enableSearch);
+    
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    
+    let buffer = '';
+    let isThinkingPhase = true;
+    let references = [];
+    let hasStartedAnswer = false;
+    
+    // 發送思考開始訊號
+    if (showThinking) {
+      await writer.write(encoder.encode(`data: ${JSON.stringify({
+        type: 'thinking_start'
+      })}\n\n`));
+    }
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      
+      // 處理 Server-Sent Events 格式
+      const chunks = buffer.split('\n\n');
+      buffer = chunks.pop(); // 保留最後一個不完整的塊
+      
+      for (const chunk of chunks) {
+        if (chunk.trim() === '') continue;
+        
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              continue;
+            }
+            
+            try {
+              const parsed = JSON.parse(data);
+              console.log('📥 收到串流數據:', parsed);
+              
+              // 處理 Gemini 回應
+              if (parsed.candidates && parsed.candidates[0]) {
+                const candidate = parsed.candidates[0];
+                
+                // 處理 grounding metadata（引用來源）
+                if (candidate.groundingMetadata && candidate.groundingMetadata.groundingChunks && references.length === 0) {
+                  references = candidate.groundingMetadata.groundingChunks.map(chunk => ({
+                    title: chunk.web?.title || '未知來源',
+                    uri: chunk.web?.uri || '#',
+                    snippet: chunk.content || ''
+                  }));
+                  
+                  // 發送引用資料
+                  await writer.write(encoder.encode(`data: ${JSON.stringify({
+                    type: 'grounding',
+                    references: references
+                  })}\n\n`));
+                }
+                
+                // 處理內容
+                if (candidate.content && candidate.content.parts) {
+                  for (const part of candidate.content.parts) {
+                    if (part.thought === true && showThinking && isThinkingPhase) {
+                      // 思考內容 - 逐字發送
+                      const text = part.text || '';
+                      for (let i = 0; i < text.length; i++) {
+                        await writer.write(encoder.encode(`data: ${JSON.stringify({
+                          type: 'thinking_chunk',
+                          content: text[i]
+                        })}\n\n`));
+                        
+                        // 添加小延遲以模擬打字效果
+                        await new Promise(resolve => setTimeout(resolve, 10));
+                      }
+                    } else if (part.thought !== true && part.text) {
+                      // 結束思考階段，開始答案階段
+                      if (isThinkingPhase) {
+                        isThinkingPhase = false;
+                        if (showThinking) {
+                          await writer.write(encoder.encode(`data: ${JSON.stringify({
+                            type: 'thinking_end'
+                          })}\n\n`));
+                        }
+                        
+                        if (!hasStartedAnswer) {
+                          await writer.write(encoder.encode(`data: ${JSON.stringify({
+                            type: 'answer_start'
+                          })}\n\n`));
+                          hasStartedAnswer = true;
+                        }
+                      }
+                      
+                      // 答案內容 - 逐字發送
+                      const text = part.text || '';
+                      for (let i = 0; i < text.length; i++) {
+                        await writer.write(encoder.encode(`data: ${JSON.stringify({
+                          type: 'answer_chunk',
+                          content: text[i]
+                        })}\n\n`));
+                        
+                        // 添加小延遲以模擬打字效果
+                        await new Promise(resolve => setTimeout(resolve, 15));
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (parseError) {
+              console.warn('解析 Gemini 串流數據錯誤:', parseError, 'Data:', data);
+            }
+          }
+        }
+      }
+    }
+    
+    // 發送完成訊號
+    await writer.write(encoder.encode(`data: ${JSON.stringify({
+      type: 'complete',
+      references: references
+    })}\n\n`));
+    
+    await writer.write(encoder.encode('data: [DONE]\n\n'));
+    
+  } catch (error) {
+    console.error('processStreamingResponse 錯誤:', error);
+    await writer.write(encoder.encode(`data: ${JSON.stringify({
+      type: 'error',
+      message: error.message || '串流處理失敗'
+    })}\n\n`));
+  }
+}
+
+// 調用 Gemini 串流 API
+async function callStreamingGeminiAPI(question, env, withSearch = true) {
+  const apiKey = env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY not configured');
+  }
+
+  console.log(`=== 開始 Gemini 串流 API 調用 (withSearch: ${withSearch}) ===`);
+
+  // 構建請求體
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          {
+            text: question
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 65536,
+      responseMimeType: "text/plain",
+      thinking_config: {
+        thinking_budget: 24576,
+        include_thoughts: true
+      }
+    },
+    safetySettings: [
+      {
+        category: "HARM_CATEGORY_HARASSMENT",
+        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+      },
+      {
+        category: "HARM_CATEGORY_HATE_SPEECH",
+        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+      },
+      {
+        category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+      },
+      {
+        category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+        threshold: "BLOCK_MEDIUM_AND_ABOVE"
+      }
+    ]
+  };
+
+  // 根據 withSearch 決定是否添加 Google Search 工具
+  if (withSearch) {
+    requestBody.tools = [
+      {
+        googleSearch: {}
+      }
+    ];
+    requestBody.systemInstruction = {
+      parts: [
+        {
+          text: "請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請結合網路搜尋資料與深度邏輯推理：1. 基於搜尋到的最新資料提供準確答案，並確實引用相關來源 2. 同時進行深度分析和邏輯推理，展示您的思考過程、分析步驟和推理邏輯 3. 將網路資料與第一性原理結合，逐步建構完整論證"
+        }
+      ]
+    };
+  } else {
+    requestBody.systemInstruction = {
+      parts: [
+        {
+          text: "請全部用繁體中文回答，並以台灣的資料、法規、文化為準。請進行純粹的邏輯推理分析：1. 專注於深度分析和邏輯推理，詳細展示您的思考過程、分析步驟和推理邏輯 2. 從第一性原理出發，逐步建構論證 3. 提供最深層的理論思考與概念探討"
+        }
+      ]
+    };
+  }
+
+  console.log('📋 請求體:', JSON.stringify(requestBody, null, 2));
+
+  // 使用串流 API 端點
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${apiKey}`;
+  
+  console.log('🌐 請求 URL:', url.replace(apiKey, 'API_KEY_HIDDEN'));
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  console.log(`📨 串流回應狀態: ${response.status} ${response.statusText}`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ Gemini 串流 API 錯誤:', errorText);
+    throw new Error(`Gemini streaming API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response;
 }
 
 // 處理雙重 Gemini API 調用
