@@ -209,15 +209,15 @@ class StreamingChatApp {
 
     addUserMessage(message) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'chat-message user-message';
+        messageDiv.className = 'message user-message';
         messageDiv.innerHTML = `
             <div class="message-content">
                 <div class="message-header">
                     <i class="fas fa-user"></i>
-                    <span class="message-label">您的問題</span>
-                    <span class="timestamp">${new Date().toLocaleString('zh-TW')}</span>
+                    <span class="message-label">用戶</span>
+                    <span class="message-time">${this.getCurrentTime()}</span>
                 </div>
-                <div class="user-text">${this.escapeHtml(message)}</div>
+                <div class="message-text">${this.escapeHtml(message)}</div>
             </div>
         `;
         
@@ -387,20 +387,13 @@ class StreamingChatApp {
 
     createResponseContainer() {
         const responseDiv = document.createElement('div');
-        responseDiv.className = 'chat-message ai-message';
+        responseDiv.className = 'message ai-message';
         responseDiv.innerHTML = `
             <div class="message-content">
                 <div class="message-header">
                     <i class="fas fa-robot"></i>
-                    <span class="message-label">AI 回應</span>
-                    <span class="timestamp">${new Date().toLocaleString('zh-TW')}</span>
-                    <div class="streaming-indicator">
-                        <i class="fas fa-circle-notch fa-spin"></i>
-                        <span>串流中...</span>
-                    </div>
-                </div>
-                <div class="response-content">
-                    <!-- 內容將在此處動態添加 -->
+                    <span class="message-label">AI 助手</span>
+                    <span class="message-time">${this.getCurrentTime()}</span>
                 </div>
             </div>
         `;
@@ -411,150 +404,148 @@ class StreamingChatApp {
     }
 
     createThinkingContainer(responseDiv) {
-        const responseContent = responseDiv.querySelector('.response-content');
+        const messageContent = responseDiv.querySelector('.message-content');
         
         const thinkingDiv = document.createElement('div');
         thinkingDiv.className = 'thinking-section';
         thinkingDiv.innerHTML = `
-            <div class="section-header">
+            <div class="thinking-header">
                 <i class="fas fa-brain"></i>
                 <span>思考流程</span>
-                <div class="thinking-indicator">
+                <div class="streaming-indicator">
                     <i class="fas fa-circle-notch fa-spin"></i>
                 </div>
             </div>
             <div class="thinking-content">
-                <div class="thinking-text"></div>
             </div>
         `;
         
-        responseContent.appendChild(thinkingDiv);
+        messageContent.appendChild(thinkingDiv);
         this.scrollToBottom();
-        return thinkingDiv.querySelector('.thinking-text');
+        return thinkingDiv.querySelector('.thinking-content');
     }
 
     createAnswerContainer(responseDiv) {
-        const responseContent = responseDiv.querySelector('.response-content');
+        const messageContent = responseDiv.querySelector('.message-content');
         
-        // 隱藏思考中指示器
-        const thinkingIndicator = responseDiv.querySelector('.thinking-indicator');
-        if (thinkingIndicator) {
-            thinkingIndicator.style.display = 'none';
+        // 隱藏思考中的串流指示器
+        const streamingIndicator = responseDiv.querySelector('.streaming-indicator');
+        if (streamingIndicator) {
+            streamingIndicator.style.display = 'none';
         }
 
         const answerDiv = document.createElement('div');
-        answerDiv.className = 'answer-section';
+        answerDiv.className = 'response-section';
         answerDiv.innerHTML = `
-            <div class="section-header">
-                <i class="fas fa-comment-dots"></i>
-                <span>詳細回答</span>
-                <div class="answer-indicator">
-                    <i class="fas fa-circle-notch fa-spin"></i>
-                </div>
+            <div class="response-header">
+                <i class="fas fa-comment-alt"></i>
+                <span>回答</span>
             </div>
-            <div class="answer-content">
-                <div class="answer-text"></div>
+            <div class="response-content">
             </div>
         `;
         
-        responseContent.appendChild(answerDiv);
+        messageContent.appendChild(answerDiv);
         this.scrollToBottom();
-        return answerDiv.querySelector('.answer-text');
+        return answerDiv.querySelector('.response-content');
     }
 
     createReferencesContainer(responseDiv, references) {
-        const responseContent = responseDiv.querySelector('.response-content');
+        const messageContent = responseDiv.querySelector('.message-content');
         
-        if (!this.showReferencesCheckbox?.checked) {
+        if (!this.showReferencesCheckbox?.checked || !references || references.length < 10) {
             return null;
         }
 
         const referencesDiv = document.createElement('div');
-        referencesDiv.className = 'references-section';
+        referencesDiv.className = 'references-section large-reference-set';
         referencesDiv.innerHTML = `
-            <div class="section-header">
-                <i class="fas fa-link"></i>
-                <span>引用來源</span>
+            <div class="references-header">
+                <i class="fas fa-list-alt"></i>
+                <span>引用來源匯總</span>
+                <span class="reference-count">(${references.length} 個來源)</span>
+                <button class="toggle-references" onclick="this.parentElement.parentElement.classList.toggle('collapsed')">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
             </div>
             <div class="references-content">
-                ${references.map((ref, index) => `
-                    <div class="reference-item">
-                        <div class="reference-header">
-                            <i class="fas fa-external-link-alt"></i>
-                            <a href="${ref.uri}" target="_blank" rel="noopener noreferrer">
-                                ${ref.title || `來源 ${index + 1}`}
-                            </a>
-                        </div>
-                        <div class="reference-snippet">${ref.snippet || ''}</div>
-                    </div>
-                `).join('')}
+                ${this.formatLargeReferenceSet(references)}
             </div>
         `;
         
-        responseContent.appendChild(referencesDiv);
+        messageContent.appendChild(referencesDiv);
         this.scrollToBottom();
         return referencesDiv;
     }
 
     appendToContainer(container, content) {
         if (container) {
-            // 關閉回答中的轉圈
-            const answerIndicator = container.closest('.answer-section')?.querySelector('.answer-indicator');
-            if (answerIndicator) {
-                answerIndicator.style.display = 'none';
-            }
-            container.innerHTML += this.escapeHtml(content);
+            // 格式化內容（如果是回答內容）
+            const formattedContent = container.closest('.response-section') ? 
+                this.formatResponse(content) : content;
+            container.innerHTML += formattedContent;
             this.scrollToBottom();
         }
     }
 
     showSessionCode(responseDiv, code) {
-        // 隱藏所有串流指示器
-        const indicators = responseDiv.querySelectorAll('.fa-spin');
-        indicators.forEach(indicator => {
-            indicator.classList.remove('fa-spin');
+        // 隱藏串流指示器
+        const streamingIndicators = responseDiv.querySelectorAll('.streaming-indicator');
+        streamingIndicators.forEach(indicator => {
             indicator.style.display = 'none';
         });
 
-        const streamingIndicator = responseDiv.querySelector('.streaming-indicator');
-        if (streamingIndicator) {
-            streamingIndicator.innerHTML = '<i class="fas fa-check"></i><span>完成</span>';
-        }
-
         if (!this.hasShownSessionId) {
-            const responseContent = responseDiv.querySelector('.response-content');
+            const messageContent = responseDiv.querySelector('.message-content');
             const sessionDiv = document.createElement('div');
-            sessionDiv.className = 'session-code-section';
+            sessionDiv.className = 'session-id-display';
             sessionDiv.innerHTML = `
-                <div class="session-code-header">
+                <div class="session-id-header">
                     <i class="fas fa-id-card"></i>
-                    <span>識別碼</span>
+                    <span>研究識別碼</span>
                 </div>
-                <div class="session-code-content">
-                    <div class="session-code">${code}</div>
-                    <div class="session-note">請記錄此識別碼，以便在問卷中提供</div>
+                <div class="session-id-content">
+                    <div class="session-id-value">
+                        <span class="session-id-text">${code}</span>
+                        <button class="copy-session-btn" id="copy-btn-${code}" onclick="window.chatApp.copySessionCode('${code}', this)" title="複製識別碼">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <p class="session-id-note">
+                        <i class="fas fa-info-circle"></i>
+                        請記下此識別碼，用於問卷填寫和後續追蹤
+                    </p>
                 </div>
             `;
             
-            responseContent.appendChild(sessionDiv);
+            messageContent.appendChild(sessionDiv);
             this.hasShownSessionId = true;
             this.scrollToBottom();
         }
     }
 
-    showErrorInResponse(responseDiv, errorMessage) {
-        const responseContent = responseDiv.querySelector('.response-content');
-        
-        // 隱藏串流指示器
-        const streamingIndicator = responseDiv.querySelector('.streaming-indicator');
-        if (streamingIndicator) {
-            streamingIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>錯誤</span>';
-        }
+    copySessionCode(code, buttonElement) {
+        navigator.clipboard.writeText(code).then(() => {
+            const originalHTML = buttonElement.innerHTML;
+            buttonElement.innerHTML = '<i class="fas fa-check"></i>';
+            buttonElement.style.color = '#28a745';
+            
+            setTimeout(() => {
+                buttonElement.innerHTML = originalHTML;
+                buttonElement.style.color = '';
+            }, 2000);
+        }).catch(err => {
+            console.error('複製失敗:', err);
+        });
+    }
 
+    showErrorInResponse(responseDiv, errorMessage) {
+        const messageContent = responseDiv.querySelector('.message-content');
+        
         const errorDiv = document.createElement('div');
         errorDiv.className = 'error-section';
         errorDiv.innerHTML = `
-            <div class="section-header">
+            <div class="error-header">
                 <i class="fas fa-exclamation-triangle"></i>
                 <span>錯誤</span>
             </div>
@@ -563,7 +554,25 @@ class StreamingChatApp {
             </div>
         `;
         
-        responseContent.appendChild(errorDiv);
+        messageContent.appendChild(errorDiv);
+        this.scrollToBottom();
+    }
+
+    addErrorMessage(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message error-message';
+        messageDiv.innerHTML = `
+            <div class="message-content">
+                <div class="message-header">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span class="message-label">錯誤</span>
+                    <span class="message-time">${this.getCurrentTime()}</span>
+                </div>
+                <div class="error-text">${this.escapeHtml(message)}</div>
+            </div>
+        `;
+        
+        this.chatContainer.appendChild(messageDiv);
         this.scrollToBottom();
     }
 
@@ -634,19 +643,23 @@ class StreamingChatApp {
     }
 
     async translateAndAppendThinking(container, content) {
-        // 直接顯示英文內容（即時）
-        this.appendToContainer(container, content);
+        // 直接顯示英文內容（即時），但先格式化
+        const formattedContent = this.formatThinking(content);
+        container.innerHTML += formattedContent;
+        this.scrollToBottom();
         
         try {
             // 非同步翻譯為中文
             const translatedContent = await this.translateText(content);
             if (translatedContent && translatedContent !== content) {
-                // 替換為中文內容
-                const lastContentIndex = container.innerHTML.lastIndexOf(this.escapeHtml(content));
+                // 格式化翻譯後的內容
+                const formattedTranslated = this.formatThinking(translatedContent);
+                // 替換最後一段內容
+                const lastContentIndex = container.innerHTML.lastIndexOf(formattedContent);
                 if (lastContentIndex !== -1) {
                     container.innerHTML = container.innerHTML.substring(0, lastContentIndex) + 
-                                        this.escapeHtml(translatedContent) + 
-                                        container.innerHTML.substring(lastContentIndex + this.escapeHtml(content).length);
+                                        formattedTranslated + 
+                                        container.innerHTML.substring(lastContentIndex + formattedContent.length);
                     this.scrollToBottom();
                 }
             }
@@ -727,6 +740,143 @@ class StreamingChatApp {
             console.error('完整答案請求錯誤:', error);
             this.showErrorInResponse(responseDiv, `獲取完整答案時發生錯誤: ${error.message}`);
         }
+    }
+
+    formatThinking(thinking) {
+        if (!thinking) return '';
+        
+        // 處理 <thinking> 標籤 - 提取內容並移除標籤
+        let formatted = thinking;
+        
+        // 如果包含 <thinking> 標籤，提取其中的內容
+        const thinkingMatch = thinking.match(/<thinking>([\s\S]*?)<\/thinking>/);
+        if (thinkingMatch) {
+            formatted = thinkingMatch[1].trim();
+        }
+        
+        // 移除任何剩餘的 <thinking> 標籤
+        formatted = formatted.replace(/<\/?thinking>/g, '');
+
+        // 處理 Markdown 格式 - 在轉換 HTML 之前先處理
+        // 移除 Markdown 標題 ### ## #（包括行首和 <br> 後的）
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        formatted = formatted.replace(/(<br>)#{1,6}\s*/g, '$1');
+        
+        // 先處理粗體文字 **text** - 在處理斜體之前
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<!BOLD!>$1<!ENDBOLD!>');
+        
+        // 先保護項目符號列表的星號 (行首或<br>後的 * 空格)
+        formatted = formatted.replace(/^(\s*)\*\s/gm, '$1<!LISTBULLET!> ');
+        formatted = formatted.replace(/(<br>)(\s*)\*\s/g, '$1$2<!LISTBULLET!> ');
+        
+        // 移除斜體格式 *text* - 只保留文字內容
+        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
+
+        // 轉換為安全的 HTML
+        formatted = this.escapeHtml(formatted);
+        formatted = formatted.replace(/\n/g, '<br>');
+        
+        // 再次處理可能殘留的標題符號（針對轉換後的內容）
+        formatted = formatted.replace(/<br>\s*#{1,6}\s*/g, '<br>');
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        
+        // 恢復粗體文字標記
+        formatted = formatted.replace(/&lt;!BOLD!&gt;(.*?)&lt;!ENDBOLD!&gt;/g, '<strong>$1</strong>');
+        
+        // 處理數字列表
+        formatted = formatted.replace(/(\d+)\.\s/g, '<strong>$1.</strong> ');
+        
+        // 處理項目符號列表 (包括星號、橫線、圓點)
+        formatted = formatted.replace(/^[-•]\s/gm, '<span style="color: #666;">•</span> ');
+        formatted = formatted.replace(/&lt;!LISTBULLET!&gt;/g, '<span style="color: #666;">•</span>');
+        
+        // 處理重要標題（以冒號結尾的行）
+        formatted = formatted.replace(/^([^<\n]+：)/gm, '<strong style="color: #2c3e50;">$1</strong>');
+        
+        return formatted;
+    }
+
+    formatResponse(response) {
+        if (!response) return '';
+        
+        // 移除任何 <thinking> 標籤（如果意外包含在回答中）
+        let formatted = response.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
+        
+        // 處理 Markdown 格式 - 在轉換 HTML 之前先處理
+        // 移除 Markdown 標題 ### ## #（包括行首和 <br> 後的）
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        formatted = formatted.replace(/(<br>)#{1,6}\s*/g, '$1');
+        
+        // 先處理粗體文字 **text** - 在處理斜體之前
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<!BOLD!>$1<!ENDBOLD!>');
+        
+        // 先保護項目符號列表的星號 (行首或<br>後的 * 空格)
+        formatted = formatted.replace(/^(\s*)\*\s/gm, '$1<!LISTBULLET!> ');
+        formatted = formatted.replace(/(<br>)(\s*)\*\s/g, '$1$2<!LISTBULLET!> ');
+        
+        // 移除斜體格式 *text* - 只保留文字內容
+        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
+        
+        // 轉換為安全的 HTML
+        formatted = this.escapeHtml(formatted);
+        formatted = formatted.replace(/\n/g, '<br>');
+        
+        // 再次處理可能殘留的標題符號（針對轉換後的內容）
+        formatted = formatted.replace(/<br>\s*#{1,6}\s*/g, '<br>');
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        
+        // 恢復粗體文字標記
+        formatted = formatted.replace(/&lt;!BOLD!&gt;(.*?)&lt;!ENDBOLD!&gt;/g, '<strong>$1</strong>');
+        
+        // 處理標題（以冒號結尾）
+        formatted = formatted.replace(/^([^<\n]+：)/gm, '<strong style="color: #2c3e50;">$1</strong>');
+        
+        // 處理數字列表
+        formatted = formatted.replace(/^(\d+)\.\s/gm, '<strong>$1.</strong> ');
+        
+        // 處理項目符號列表 (包括星號、橫線、圓點)
+        formatted = formatted.replace(/^[-•]\s/gm, '<span style="color: #666;">•</span> ');
+        formatted = formatted.replace(/&lt;!LISTBULLET!&gt;/g, '<span style="color: #666;">•</span>');
+        
+        return formatted;
+    }
+
+    formatLargeReferenceSet(references) {
+        if (!references || references.length === 0) return '';
+        
+        // 將大量引用來源以更緊湊的方式顯示
+        return `
+            <div class="large-reference-notice">
+                <p><strong>📋 本回答引用了 ${references.length} 個來源，已移除文本中的註腳編號以提升閱讀體驗。</strong></p>
+                <p>以下是完整的引用來源列表：</p>
+            </div>
+            <div class="large-reference-list">
+                ${references.map((ref, index) => `
+                    <div class="reference-item compact">
+                        <div class="reference-number">${index + 1}</div>
+                        <div class="reference-details">
+                            <a href="${ref.url || ref.uri}" target="_blank" rel="noopener noreferrer" title="${this.escapeHtml(ref.title)}">
+                                ${this.escapeHtml(ref.title.length > 80 ? ref.title.substring(0, 77) + '...' : ref.title)}
+                            </a>
+                            <div class="reference-domain">${this.extractDomain(ref.url || ref.uri)}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    extractDomain(url) {
+        try {
+            const domain = new URL(url).hostname;
+            return domain.replace('www.', '');
+        } catch (e) {
+            return url || '';
+        }
+    }
+
+    getCurrentTime() {
+        return new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
     }
 
     addErrorMessage(message) {
