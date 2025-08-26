@@ -284,7 +284,15 @@ class StreamingChatApp {
 
                         const dataStr = dataLines.join('\n');   // 多行合併成一個 payload
                         if (dataStr === '[DONE]') {
-                            // 與 OpenAI 類似的完成訊號（若你的後端有這約定）
+                            // 結束：停止外層讀取、更新 UI
+                            shouldStop = true;
+                            // 顯示完成（避免只看到 ping/complete 卻沒關轉圈）
+                            const code = this.generateSessionCode({
+                                originalQuestion: question,
+                                thinking: this.showThinkingCheckbox?.checked,
+                                references: []
+                            });
+                            this.showSessionCode(responseDiv, code);
                             break;
                         }
 
@@ -296,41 +304,55 @@ class StreamingChatApp {
                             continue;
                         }
 
-                        // === 依你的自訂協議處理 ===
-                        switch (payload.type) {
-                            case 'thinking_start':
-                                thinkingContainer = this.createThinkingContainer(responseDiv);
-                                break;
-                            case 'thinking_chunk':
-                                if (thinkingContainer && this.showThinkingCheckbox?.checked) {
-                                    this.appendToContainer(thinkingContainer, payload.content);
-                                }
-                                break;
-                            case 'thinking_end':
-                                answerContainer = this.createAnswerContainer(responseDiv);
-                                break;
-                            case 'answer_start':
-                                if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
-                                break;
-                            case 'answer_chunk':
-                                if (answerContainer) this.appendToContainer(answerContainer, payload.content);
-                                break;
-                            case 'grounding':
-                                if (payload.references?.length) {
-                                    this.createReferencesContainer(responseDiv, payload.references);
-                                }
-                                break;
-                            case 'complete':
-                                const code = this.generateSessionCode({
-                                    originalQuestion: question,
-                                    thinking: this.showThinkingCheckbox?.checked,
-                                    references: payload.references || []
-                                });
-                                this.showSessionCode(responseDiv, code);
-                                shouldStop = true; // 完成後停止讀取
-                                break;
-                            case 'error':
-                                throw new Error(payload.message || '串流處理錯誤');
+                        // 如果是你自訂的協議（有 type），照舊處理
+                        if (payload && typeof payload === 'object' && 'type' in payload) {
+                            switch (payload.type) {
+                                case 'thinking_start':
+                                    thinkingContainer = this.createThinkingContainer(responseDiv);
+                                    break;
+                                case 'thinking_chunk':
+                                    if (thinkingContainer && this.showThinkingCheckbox?.checked) {
+                                        this.appendToContainer(thinkingContainer, payload.content);
+                                    }
+                                    break;
+                                case 'thinking_end':
+                                    answerContainer = this.createAnswerContainer(responseDiv);
+                                    break;
+                                case 'answer_start':
+                                    if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
+                                    break;
+                                case 'answer_chunk':
+                                    if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
+                                    if (answerContainer) this.appendToContainer(answerContainer, payload.content);
+                                    break;
+                                case 'grounding':
+                                    if (payload.references?.length) {
+                                        this.createReferencesContainer(responseDiv, payload.references);
+                                    }
+                                    break;
+                                case 'complete':
+                                    const code = this.generateSessionCode({
+                                        originalQuestion: question,
+                                        thinking: this.showThinkingCheckbox?.checked,
+                                        references: payload.references || []
+                                    });
+                                    this.showSessionCode(responseDiv, code);
+                                    shouldStop = true; // 完成後停止讀取
+                                    break;
+                                case 'error':
+                                    throw new Error(payload.message || '串流處理錯誤');
+                            }
+                        } else {
+                            // 否則視為「Gemini 原生 SSE」事件
+                            const didAppend = this.handleGeminiPayload(payload, {
+                                ensureAnswerContainer: () => {
+                                    if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
+                                    return answerContainer;
+                                },
+                                showThinking: !!(this.showThinkingCheckbox && this.showThinkingCheckbox.checked),
+                            });
+
+                            // 依需要也可以這裡觀察安全性封鎖/回饋等
                         }
                     }
                 }
@@ -457,6 +479,11 @@ class StreamingChatApp {
 
     appendToContainer(container, content) {
         if (container) {
+            // 關閉回答中的轉圈
+            const answerIndicator = container.closest('.answer-section')?.querySelector('.answer-indicator');
+            if (answerIndicator) {
+                answerIndicator.style.display = 'none';
+            }
             container.innerHTML += this.escapeHtml(content);
             this.scrollToBottom();
         }
@@ -519,6 +546,53 @@ class StreamingChatApp {
         
         responseContent.appendChild(errorDiv);
         this.scrollToBottom();
+    }
+
+    handleGeminiPayload(payload, ctx) {
+        // 可能收到安全性或提示回饋：payload.promptFeedback / promptTokenCount 等
+        // 這裡先專注於把文字抽出來
+        if (!payload || typeof payload !== 'object') return false;
+
+        const extractTexts = () => {
+            // 支援兩型：
+            // 1) candidates[0].delta.parts[*].text  (增量)
+            // 2) candidates[0].content.parts[*].text (整段)
+            const cand = Array.isArray(payload.candidates) && payload.candidates[0] ? payload.candidates[0] : null;
+            if (!cand) return [];
+
+            // 先嘗試 delta（增量）
+            if (cand.delta && Array.isArray(cand.delta.parts)) {
+                return cand.delta.parts
+                    .map(p => (p && typeof p.text === 'string') ? p.text : '')
+                    .filter(Boolean);
+            }
+
+            // 再嘗試 content（完整/分段）
+            if (cand.content && Array.isArray(cand.content.parts)) {
+                return cand.content.parts
+                    .map(p => (p && typeof p.text === 'string') ? p.text : '')
+                    .filter(Boolean);
+            }
+
+            // 有些情況 text 可能直接掛在 cand.text（備援）
+            if (typeof cand.text === 'string' && cand.text) {
+                return [cand.text];
+            }
+
+            return [];
+        };
+
+        const pieces = extractTexts();
+        if (pieces.length === 0) {
+            // 也許是 safety 標記、meta、或非文字增量，直接略過
+            return false;
+        }
+
+        const answerContainer = ctx.ensureAnswerContainer();
+        for (const t of pieces) {
+            this.appendToContainer(answerContainer, t);
+        }
+        return true;
     }
 
     addErrorMessage(message) {
