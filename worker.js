@@ -387,10 +387,12 @@ async function handleStreamingGeminiRequest(request, env) {
 
     return new Response(readable, {
       headers: {
-        ...getCORSHeaders(),
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
       }
     });
 
@@ -428,6 +430,9 @@ async function processStreamingResponse(question, env, writer, encoder, options)
     let hasShownThinking = false;
     
     console.log('🎬 開始處理串流回應...');
+    
+    // 發送初始 keep-alive 註解行
+    await writer.write(encoder.encode(': ping\n\n'));
     
     while (true) {
       const { done, value } = await reader.read();
@@ -1174,7 +1179,7 @@ function getCORSHeaders() {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*', // 在生產環境中，請將此設置為您的 GitHub Pages 域名
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
     'Access-Control-Max-Age': '86400',
   };
 }

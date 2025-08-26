@@ -237,8 +237,8 @@ class StreamingChatApp {
                 },
                 body: JSON.stringify({
                     question: question,
-                    enableSearch: this.enableSearchCheckbox?.checked !== false,
-                    showThinking: this.showThinkingCheckbox?.checked !== false,
+                    enableSearch: !!(this.enableSearchCheckbox && this.enableSearchCheckbox.checked),
+                    showThinking: !!(this.showThinkingCheckbox && this.showThinkingCheckbox.checked),
                     sessionId: this.sessionId
                 })
             });
@@ -254,65 +254,83 @@ class StreamingChatApp {
             let answerContainer = null;
             let referencesContainer = null;
             
-            let buffer = '';
-            let isThinkingPhase = true;
+            let buf = '';
+            let eventBuf = []; // 暫存單一 SSE 事件的多行
+            let shouldStop = false;
 
             try {
-                while (true) {
+                while (true && !shouldStop) {
                     const { done, value } = await reader.read();
                     if (done) break;
+                    
+                    buf += decoder.decode(value, { stream: true });
 
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop(); // 保留不完整的行
+                    // 依據 SSE 規格，事件以「空白行」結束（\n\n 或 \r\n\r\n）
+                    let sep;
+                    while ((sep = buf.search(/\r?\n\r?\n/)) !== -1) {
+                        const rawEvent = buf.slice(0, sep);     // 這是一個完整事件（可能多行 data:）
+                        buf = buf.slice(sep + (buf[sep] === '\r' ? 4 : 2));
 
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6);
-                            if (data === '[DONE]') {
-                                continue;
-                            }
+                        // 將多行 data: 合併
+                        const dataLines = rawEvent
+                            .split(/\r?\n/)
+                            .filter(l => l.startsWith('data:'))   // 允許 'data:' 或 'data: ' 兩者
+                            .map(l => l.replace(/^data:\s?/, ''));
 
-                            try {
-                                const parsed = JSON.parse(data);
-                                
-                                if (parsed.type === 'thinking_start') {
-                                    thinkingContainer = this.createThinkingContainer(responseDiv);
-                                    isThinkingPhase = true;
-                                } else if (parsed.type === 'thinking_chunk') {
-                                    if (thinkingContainer && this.showThinkingCheckbox?.checked) {
-                                        this.appendToContainer(thinkingContainer, parsed.content);
-                                    }
-                                } else if (parsed.type === 'thinking_end') {
-                                    isThinkingPhase = false;
-                                    answerContainer = this.createAnswerContainer(responseDiv);
-                                } else if (parsed.type === 'answer_start') {
-                                    if (!answerContainer) {
-                                        answerContainer = this.createAnswerContainer(responseDiv);
-                                    }
-                                } else if (parsed.type === 'answer_chunk') {
-                                    if (answerContainer) {
-                                        this.appendToContainer(answerContainer, parsed.content);
-                                    }
-                                } else if (parsed.type === 'grounding') {
-                                    if (parsed.references && parsed.references.length > 0) {
-                                        referencesContainer = this.createReferencesContainer(responseDiv, parsed.references);
-                                    }
-                                } else if (parsed.type === 'complete') {
-                                    // 生成識別碼並顯示
-                                    const sessionCode = this.generateSessionCode({
-                                        originalQuestion: question,
-                                        thinking: this.showThinkingCheckbox?.checked,
-                                        references: parsed.references || []
-                                    });
-                                    this.showSessionCode(responseDiv, sessionCode);
-                                    break;
-                                } else if (parsed.type === 'error') {
-                                    throw new Error(parsed.message || '串流處理錯誤');
+                        if (dataLines.length === 0) {
+                            // 可能是註解行（: ping）或其他欄位，略過
+                            continue;
+                        }
+
+                        const dataStr = dataLines.join('\n');   // 多行合併成一個 payload
+                        if (dataStr === '[DONE]') {
+                            // 與 OpenAI 類似的完成訊號（若你的後端有這約定）
+                            break;
+                        }
+
+                        let payload;
+                        try {
+                            payload = JSON.parse(dataStr);
+                        } catch (e) {
+                            console.warn('SSE JSON 解析失敗，原始：', dataStr);
+                            continue;
+                        }
+
+                        // === 依你的自訂協議處理 ===
+                        switch (payload.type) {
+                            case 'thinking_start':
+                                thinkingContainer = this.createThinkingContainer(responseDiv);
+                                break;
+                            case 'thinking_chunk':
+                                if (thinkingContainer && this.showThinkingCheckbox?.checked) {
+                                    this.appendToContainer(thinkingContainer, payload.content);
                                 }
-                            } catch (parseError) {
-                                console.warn('解析串流數據錯誤:', parseError, 'Data:', data);
-                            }
+                                break;
+                            case 'thinking_end':
+                                answerContainer = this.createAnswerContainer(responseDiv);
+                                break;
+                            case 'answer_start':
+                                if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
+                                break;
+                            case 'answer_chunk':
+                                if (answerContainer) this.appendToContainer(answerContainer, payload.content);
+                                break;
+                            case 'grounding':
+                                if (payload.references?.length) {
+                                    this.createReferencesContainer(responseDiv, payload.references);
+                                }
+                                break;
+                            case 'complete':
+                                const code = this.generateSessionCode({
+                                    originalQuestion: question,
+                                    thinking: this.showThinkingCheckbox?.checked,
+                                    references: payload.references || []
+                                });
+                                this.showSessionCode(responseDiv, code);
+                                shouldStop = true; // 完成後停止讀取
+                                break;
+                            case 'error':
+                                throw new Error(payload.message || '串流處理錯誤');
                         }
                     }
                 }
