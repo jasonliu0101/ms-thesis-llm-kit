@@ -425,113 +425,134 @@ async function processStreamingResponse(question, env, writer, encoder, options)
     let isThinkingPhase = true;
     let references = [];
     let hasStartedAnswer = false;
+    let hasShownThinking = false;
     
-    // 發送思考開始訊號
-    if (showThinking) {
-      await writer.write(encoder.encode(`data: ${JSON.stringify({
-        type: 'thinking_start'
-      })}\n\n`));
-    }
+    console.log('🎬 開始處理串流回應...');
     
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       
       buffer += decoder.decode(value, { stream: true });
+      console.log('📦 原始 buffer 內容:', buffer);
       
-      // 處理 Server-Sent Events 格式
-      const chunks = buffer.split('\n\n');
-      buffer = chunks.pop(); // 保留最後一個不完整的塊
+      // Gemini 串流回應是以換行符分隔的 JSON 物件
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // 保留不完整的行
       
-      for (const chunk of chunks) {
-        if (chunk.trim() === '') continue;
+      for (const line of lines) {
+        if (line.trim() === '') continue;
         
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              continue;
+        try {
+          // 直接解析每行的 JSON
+          const parsed = JSON.parse(line);
+          console.log('📥 解析的串流數據:', JSON.stringify(parsed, null, 2));
+          
+          // 處理 Gemini 回應
+          if (parsed.candidates && parsed.candidates[0]) {
+            const candidate = parsed.candidates[0];
+            
+            // 處理 grounding metadata（引用來源）
+            if (candidate.groundingMetadata && candidate.groundingMetadata.groundingChunks && references.length === 0) {
+              references = candidate.groundingMetadata.groundingChunks.map(chunk => ({
+                title: chunk.web?.title || '未知來源',
+                uri: chunk.web?.uri || '#',
+                snippet: chunk.content || ''
+              }));
+              
+              console.log('🔗 找到引用來源:', references);
+              
+              // 發送引用資料
+              await writer.write(encoder.encode(`data: ${JSON.stringify({
+                type: 'grounding',
+                references: references
+              })}\n\n`));
             }
             
-            try {
-              const parsed = JSON.parse(data);
-              console.log('📥 收到串流數據:', parsed);
+            // 處理內容
+            if (candidate.content && candidate.content.parts) {
+              console.log('📝 處理內容部分，parts 數量:', candidate.content.parts.length);
               
-              // 處理 Gemini 回應
-              if (parsed.candidates && parsed.candidates[0]) {
-                const candidate = parsed.candidates[0];
+              for (const part of candidate.content.parts) {
+                console.log('📄 處理 part:', { thought: part.thought, hasText: !!part.text, textLength: part.text?.length });
                 
-                // 處理 grounding metadata（引用來源）
-                if (candidate.groundingMetadata && candidate.groundingMetadata.groundingChunks && references.length === 0) {
-                  references = candidate.groundingMetadata.groundingChunks.map(chunk => ({
-                    title: chunk.web?.title || '未知來源',
-                    uri: chunk.web?.uri || '#',
-                    snippet: chunk.content || ''
-                  }));
+                if (part.thought === true && showThinking) {
+                  // 思考內容
+                  if (!hasShownThinking) {
+                    await writer.write(encoder.encode(`data: ${JSON.stringify({
+                      type: 'thinking_start'
+                    })}\n\n`));
+                    hasShownThinking = true;
+                  }
                   
-                  // 發送引用資料
-                  await writer.write(encoder.encode(`data: ${JSON.stringify({
-                    type: 'grounding',
-                    references: references
-                  })}\n\n`));
-                }
-                
-                // 處理內容
-                if (candidate.content && candidate.content.parts) {
-                  for (const part of candidate.content.parts) {
-                    if (part.thought === true && showThinking && isThinkingPhase) {
-                      // 思考內容 - 逐字發送
-                      const text = part.text || '';
-                      for (let i = 0; i < text.length; i++) {
-                        await writer.write(encoder.encode(`data: ${JSON.stringify({
-                          type: 'thinking_chunk',
-                          content: text[i]
-                        })}\n\n`));
-                        
-                        // 添加小延遲以模擬打字效果
-                        await new Promise(resolve => setTimeout(resolve, 10));
-                      }
-                    } else if (part.thought !== true && part.text) {
-                      // 結束思考階段，開始答案階段
-                      if (isThinkingPhase) {
-                        isThinkingPhase = false;
-                        if (showThinking) {
-                          await writer.write(encoder.encode(`data: ${JSON.stringify({
-                            type: 'thinking_end'
-                          })}\n\n`));
-                        }
-                        
-                        if (!hasStartedAnswer) {
-                          await writer.write(encoder.encode(`data: ${JSON.stringify({
-                            type: 'answer_start'
-                          })}\n\n`));
-                          hasStartedAnswer = true;
-                        }
-                      }
-                      
-                      // 答案內容 - 逐字發送
-                      const text = part.text || '';
-                      for (let i = 0; i < text.length; i++) {
-                        await writer.write(encoder.encode(`data: ${JSON.stringify({
-                          type: 'answer_chunk',
-                          content: text[i]
-                        })}\n\n`));
-                        
-                        // 添加小延遲以模擬打字效果
-                        await new Promise(resolve => setTimeout(resolve, 15));
-                      }
+                  const text = part.text || '';
+                  console.log('💭 發送思考內容，長度:', text.length);
+                  
+                  if (text) {
+                    await writer.write(encoder.encode(`data: ${JSON.stringify({
+                      type: 'thinking_chunk',
+                      content: text
+                    })}\n\n`));
+                  }
+                  
+                } else if (part.thought !== true && part.text) {
+                  // 結束思考階段，開始答案階段
+                  if (isThinkingPhase) {
+                    isThinkingPhase = false;
+                    console.log('🔄 切換到答案階段');
+                    
+                    if (hasShownThinking) {
+                      await writer.write(encoder.encode(`data: ${JSON.stringify({
+                        type: 'thinking_end'
+                      })}\n\n`));
                     }
+                    
+                    if (!hasStartedAnswer) {
+                      await writer.write(encoder.encode(`data: ${JSON.stringify({
+                        type: 'answer_start'
+                      })}\n\n`));
+                      hasStartedAnswer = true;
+                    }
+                  }
+                  
+                  // 答案內容
+                  const text = part.text || '';
+                  console.log('💬 發送答案內容，長度:', text.length);
+                  
+                  if (text) {
+                    await writer.write(encoder.encode(`data: ${JSON.stringify({
+                      type: 'answer_chunk',
+                      content: text
+                    })}\n\n`));
                   }
                 }
               }
-            } catch (parseError) {
-              console.warn('解析 Gemini 串流數據錯誤:', parseError, 'Data:', data);
+            }
+            
+            // 如果這是最後一個回應且沒有內容，檢查是否需要開始答案
+            if (candidate.finishReason && !hasStartedAnswer) {
+              console.log('🏁 收到結束信號，但沒有答案內容');
+              if (hasShownThinking) {
+                await writer.write(encoder.encode(`data: ${JSON.stringify({
+                  type: 'thinking_end'
+                })}\n\n`));
+              }
+              await writer.write(encoder.encode(`data: ${JSON.stringify({
+                type: 'answer_start'
+              })}\n\n`));
+              await writer.write(encoder.encode(`data: ${JSON.stringify({
+                type: 'answer_chunk',
+                content: '抱歉，沒有收到完整的回應內容。'
+              })}\n\n`));
             }
           }
+        } catch (parseError) {
+          console.warn('❌ 解析串流數據錯誤:', parseError, 'Line:', line);
         }
       }
     }
+    
+    console.log('✅ 串流處理完成');
     
     // 發送完成訊號
     await writer.write(encoder.encode(`data: ${JSON.stringify({
@@ -542,7 +563,7 @@ async function processStreamingResponse(question, env, writer, encoder, options)
     await writer.write(encoder.encode('data: [DONE]\n\n'));
     
   } catch (error) {
-    console.error('processStreamingResponse 錯誤:', error);
+    console.error('❌ processStreamingResponse 錯誤:', error);
     await writer.write(encoder.encode(`data: ${JSON.stringify({
       type: 'error',
       message: error.message || '串流處理失敗'
