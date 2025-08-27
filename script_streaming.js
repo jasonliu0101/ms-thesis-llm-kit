@@ -331,8 +331,9 @@ class StreamingChatApp {
                                 case 'answer_chunk':
                                     if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
                                     if (answerContainer) {
-                                        // 直接附加內容，不進行格式化
-                                        answerContainer.innerHTML += payload.content;
+                                        // 立即處理markdown格式，讓顯示更即時可靠
+                                        const formattedChunk = this.formatResponseChunk(payload.content);
+                                        answerContainer.innerHTML += formattedChunk;
                                         this.scrollToBottom();
                                     }
                                     break;
@@ -342,13 +343,6 @@ class StreamingChatApp {
                                     }
                                     break;
                                 case 'complete':
-                                    // 在完整回答完成後，格式化內容
-                                    if (answerContainer) {
-                                        const rawContent = answerContainer.innerHTML;
-                                        const formattedContent = this.formatResponse(rawContent);
-                                        answerContainer.innerHTML = formattedContent;
-                                    }
-                                    
                                     // 顯示引用來源（如果有的話）
                                     if (payload.references?.length) {
                                         this.createReferencesContainer(responseDiv, payload.references);
@@ -667,41 +661,21 @@ class StreamingChatApp {
     }
 
     async translateAndAppendThinking(container, content) {
-        // 創建一個唯一的 ID 來標識這段內容
-        const contentId = `thinking-content-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
-        // 先顯示一個佔位符，避免用戶看到英文
-        const placeholder = '<div class="translating-placeholder" data-content-id="' + contentId + '">正在翻譯思考內容...</div>';
-        container.innerHTML += placeholder;
-        this.scrollToBottom();
-        
         try {
-            // 非同步翻譯為中文
+            // 直接翻譯為中文，不顯示任何英文或提示
             const translatedContent = await this.translateText(content);
             const finalContent = translatedContent || content;
             
-            // 格式化翻譯後的內容
+            // 格式化翻譯後的內容並直接顯示
             const formattedContent = this.formatThinking(finalContent);
-            
-            // 找到並替換佔位符
-            const placeholderElement = container.querySelector(`[data-content-id="${contentId}"]`);
-            if (placeholderElement) {
-                placeholderElement.outerHTML = formattedContent;
-                this.scrollToBottom();
-            } else {
-                // 如果找不到佔位符，直接附加到容器末尾
-                container.innerHTML += formattedContent;
-                this.scrollToBottom();
-            }
+            container.innerHTML += formattedContent;
+            this.scrollToBottom();
         } catch (error) {
             console.warn('翻譯思考內容失敗:', error);
-            // 翻譯失敗時，用原文替換佔位符
+            // 翻譯失敗時，直接顯示格式化的原文（不顯示錯誤提示）
             const formattedContent = this.formatThinking(content);
-            const placeholderElement = container.querySelector(`[data-content-id="${contentId}"]`);
-            if (placeholderElement) {
-                placeholderElement.outerHTML = formattedContent;
-                this.scrollToBottom();
-            }
+            container.innerHTML += formattedContent;
+            this.scrollToBottom();
         }
     }
 
@@ -814,6 +788,34 @@ class StreamingChatApp {
             console.error('❌ 完整答案請求錯誤:', error);
             this.showErrorInResponse(responseDiv, `獲取完整答案時發生錯誤: ${error.message}`);
         }
+    }
+
+    formatResponseChunk(chunk) {
+        if (!chunk) return '';
+        
+        // 處理 Markdown 格式 - 即時處理每個chunk
+        let formatted = chunk;
+        
+        // 處理粗體文字 **text**
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // 處理項目符號列表 (行首的 * 空格)
+        formatted = formatted.replace(/^\*\s/gm, '<span style="color: #666;">•</span> ');
+        
+        // 處理數字列表
+        formatted = formatted.replace(/^(\d+)\.\s/gm, '<strong>$1.</strong> ');
+        
+        // 移除 Markdown 標題符號 ### ## #
+        formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        
+        // 轉換為安全的 HTML
+        formatted = this.escapeHtml(formatted);
+        formatted = formatted.replace(/\n/g, '<br>');
+        
+        // 處理重要標題（以冒號結尾）
+        formatted = formatted.replace(/^([^<\n]+：)/gm, '<strong style="color: #2c3e50;">$1</strong>');
+        
+        return formatted;
     }
 
     formatThinking(thinking) {
