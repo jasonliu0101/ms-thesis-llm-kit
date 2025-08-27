@@ -237,7 +237,7 @@ class StreamingChatApp {
                 },
                 body: JSON.stringify({
                     question: question,
-                    enableSearch: false,  // 思考階段不使用搜尋
+                    enableSearch: !!(this.enableSearchCheckbox && this.enableSearchCheckbox.checked),  // 使用設定決定是否搜尋
                     showThinking: !!(this.showThinkingCheckbox && this.showThinkingCheckbox.checked),
                     sessionId: this.sessionId
                 })
@@ -253,6 +253,7 @@ class StreamingChatApp {
             let thinkingContainer = null;
             let answerContainer = null;
             let referencesContainer = null;
+            let collectedReferences = [];  // 收集所有引用來源
             
             let buf = '';
             let eventBuf = []; // 暫存單一 SSE 事件的多行
@@ -286,11 +287,11 @@ class StreamingChatApp {
                         if (dataStr === '[DONE]') {
                             // 結束：停止外層讀取、更新 UI
                             shouldStop = true;
-                            // 顯示完成（避免只看到 ping/complete 卻沒關轉圈）
+                            // 顯示完成
                             const code = this.generateSessionCode({
                                 originalQuestion: question,
                                 thinking: this.showThinkingCheckbox?.checked,
-                                references: []
+                                references: collectedReferences
                             });
                             this.showSessionCode(responseDiv, code);
                             break;
@@ -331,27 +332,31 @@ class StreamingChatApp {
                                 case 'answer_chunk':
                                     if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
                                     if (answerContainer) {
-                                        // 立即處理markdown格式，讓顯示更即時可靠
-                                        const formattedChunk = this.formatResponseChunk(payload.content);
+                                        // 立即處理markdown格式和清理註腳
+                                        const cleanedChunk = this.cleanFootnotesFromText(payload.content);
+                                        const formattedChunk = this.formatResponseChunk(cleanedChunk);
                                         answerContainer.innerHTML += formattedChunk;
                                         this.scrollToBottom();
                                     }
                                     break;
                                 case 'grounding':
                                     if (payload.references?.length) {
-                                        this.createReferencesContainer(responseDiv, payload.references);
+                                        collectedReferences = collectedReferences.concat(payload.references);
+                                        console.log('🔗 收集 grounding 引用來源:', payload.references.length, '個');
                                     }
                                     break;
                                 case 'complete':
-                                    // 顯示引用來源（如果有的話）
-                                    if (payload.references?.length) {
-                                        this.createReferencesContainer(responseDiv, payload.references);
+                                    // 顯示引用來源（採用 Case A 的邏輯：≥10 才顯示）
+                                    if (collectedReferences.length >= 10) {
+                                        this.createReferencesContainer(responseDiv, collectedReferences);
+                                    } else {
+                                        console.log(`📋 引用來源數量 ${collectedReferences.length} < 10，隱藏引用區塊`);
                                     }
                                     
                                     const code = this.generateSessionCode({
                                         originalQuestion: question,
                                         thinking: this.showThinkingCheckbox?.checked,
-                                        references: payload.references || []
+                                        references: collectedReferences
                                     });
                                     this.showSessionCode(responseDiv, code);
                                     shouldStop = true; // 完成後停止讀取
@@ -360,7 +365,15 @@ class StreamingChatApp {
                                     throw new Error(payload.message || '串流處理錯誤');
                             }
                         } else {
-                            // 否則視為「Gemini 原生 SSE」事件
+                            // 否則視為「Gemini 原生 SSE」事件 - 檢查 grounding 資訊
+                            if (payload.candidates && payload.candidates[0] && payload.candidates[0].groundingMetadata) {
+                                const references = this.extractReferences(payload.candidates[0].groundingMetadata);
+                                if (references.length > 0) {
+                                    collectedReferences = collectedReferences.concat(references);
+                                    console.log('🔗 從 Gemini payload 提取引用來源:', references.length, '個');
+                                }
+                            }
+
                             const didAppend = this.handleGeminiPayload(payload, {
                                 ensureThinkingContainer: () => {
                                     if (!thinkingContainer) thinkingContainer = this.createThinkingContainer(responseDiv);
@@ -479,43 +492,34 @@ class StreamingChatApp {
             return existingReferences;
         }
         
-        if (!this.showReferencesCheckbox?.checked || !references || references.length === 0) {
+        // 採用 Case A 的邏輯：只有當引用數量 ≥ 10 且開關開啟時才顯示
+        if (!this.showReferencesCheckbox?.checked || !references || references.length < 10) {
+            const reason = !this.showReferencesCheckbox.checked ? '引用來源開關關閉' : 
+                          !references ? '沒有引用資料' : 
+                          references.length === 0 ? '引用來源數量為0' : 
+                          references.length < 10 ? `引用來源數量 ${references.length} < 10，隱藏引用區塊` : '未知原因';
+            
+            console.log('❌ 不顯示引用來源區塊，原因:', reason);
             return null;
         }
 
+        console.log('✅ 顯示引用來源區塊，數量:', references.length, '≥ 10');
+
         const referencesDiv = document.createElement('div');
-        
-        // 根據引用數量決定顯示方式
-        if (references.length >= 10) {
-            // 大量引用的緊湊顯示方式
-            referencesDiv.className = 'references-section large-reference-set';
-            referencesDiv.innerHTML = `
-                <div class="references-header">
-                    <i class="fas fa-list-alt"></i>
-                    <span>引用來源匯總</span>
-                    <span class="reference-count">(${references.length} 個來源)</span>
-                    <button class="toggle-references" onclick="this.parentElement.parentElement.classList.toggle('collapsed')">
-                        <i class="fas fa-chevron-up"></i>
-                    </button>
-                </div>
-                <div class="references-content">
-                    ${this.formatLargeReferenceSet(references)}
-                </div>
-            `;
-        } else {
-            // 少量引用的標準顯示方式
-            referencesDiv.className = 'references-section';
-            referencesDiv.innerHTML = `
-                <div class="references-header">
-                    <i class="fas fa-link"></i>
-                    <span>引用來源</span>
-                    <span class="reference-count">(${references.length} 個)</span>
-                </div>
-                <div class="references-content">
-                    ${this.formatStandardReferences(references)}
-                </div>
-            `;
-        }
+        referencesDiv.className = 'references-section large-reference-set';
+        referencesDiv.innerHTML = `
+            <div class="references-header">
+                <i class="fas fa-list-alt"></i>
+                <span>引用來源匯總</span>
+                <span class="reference-count">(${references.length} 個來源)</span>
+                <button class="toggle-references" onclick="this.parentElement.parentElement.classList.toggle('collapsed')">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
+            <div class="references-content">
+                ${this.formatLargeReferenceSet(references)}
+            </div>
+        `;
         
         messageContent.appendChild(referencesDiv);
         this.scrollToBottom();
@@ -623,28 +627,6 @@ class StreamingChatApp {
         // 這裡先專注於把文字抽出來
         if (!payload || typeof payload !== 'object') return false;
 
-        // 檢查是否包含 grounding 資訊
-        if (payload.candidates && payload.candidates[0] && payload.candidates[0].groundingMetadata) {
-            const groundingData = payload.candidates[0].groundingMetadata;
-            if (groundingData.groundingChunks && groundingData.groundingChunks.length > 0) {
-                // 轉換 grounding 資料為引用格式
-                const references = groundingData.groundingChunks.map(chunk => ({
-                    title: chunk.web?.title || 'Web Reference',
-                    url: chunk.web?.uri || '#',
-                    uri: chunk.web?.uri || '#'
-                }));
-                
-                // 如果有引用來源，觸發 grounding 處理
-                if (references.length > 0) {
-                    // 使用現有的引用處理邏輯
-                    const responseDiv = ctx.ensureAnswerContainer().closest('.message.ai-message');
-                    if (responseDiv) {
-                        this.createReferencesContainer(responseDiv, references);
-                    }
-                }
-            }
-        }
-
         const extractTexts = () => {
             // 支援兩型：
             // 1) candidates[0].delta.parts[*].text  (增量)
@@ -698,7 +680,8 @@ class StreamingChatApp {
                 // 在串流模式下直接處理答案內容
                 const answerContainer = ctx.ensureAnswerContainer();
                 if (answerContainer) {
-                    const formattedChunk = this.formatResponseChunk(piece.text);
+                    const cleanedChunk = this.cleanFootnotesFromText(piece.text);
+                    const formattedChunk = this.formatResponseChunk(cleanedChunk);
                     answerContainer.innerHTML += formattedChunk;
                     this.scrollToBottom();
                 }
@@ -816,17 +799,22 @@ class StreamingChatApp {
             // 顯示完整答案
             if (result.answer) {
                 console.log('📝 正在顯示答案內容...');
-                const formattedAnswer = this.formatResponse(result.answer);
+                // 清理註腳編號並格式化答案
+                const cleanedAnswer = this.cleanFootnotesFromText(result.answer);
+                const formattedAnswer = this.formatResponse(cleanedAnswer);
                 answerContainer.innerHTML = formattedAnswer;
                 this.scrollToBottom();
             } else {
                 console.warn('⚠️ 沒有收到答案內容');
             }
 
-            // 顯示引用來源
-            if (result.references && result.references.length > 0) {
+            // 顯示引用來源（採用 Case A 的邏輯：≥10 才顯示）
+            if (result.references && result.references.length >= 10) {
                 console.log('📚 顯示引用來源:', result.references.length, '個');
                 this.createReferencesContainer(responseDiv, result.references);
+            } else {
+                const count = result.references?.length || 0;
+                console.log(`📋 引用來源數量 ${count} < 10，隱藏引用區塊`);
             }
 
             // 生成並顯示識別碼
@@ -841,6 +829,70 @@ class StreamingChatApp {
             console.error('❌ 完整答案請求錯誤:', error);
             this.showErrorInResponse(responseDiv, `獲取完整答案時發生錯誤: ${error.message}`);
         }
+    }
+
+    extractReferences(groundingMetadata) {
+        const references = [];
+        const seenUrls = new Set();
+
+        console.log('=== 提取引用來源詳細信息 ===');
+        console.log('groundingSupports 數量:', groundingMetadata.groundingSupports?.length || 0);
+        console.log('groundingChunks 數量:', groundingMetadata.groundingChunks?.length || 0);
+
+        // 檢查 groundingChunks 是否存在且有內容
+        if (!groundingMetadata.groundingChunks || groundingMetadata.groundingChunks.length === 0) {
+            console.log('⚠️ 沒有 groundingChunks 或 groundingChunks 為空');
+            return references; // 返回空數組
+        }
+
+        // 直接從 groundingChunks 提取所有有效的 web 引用
+        groundingMetadata.groundingChunks.forEach((chunk, index) => {
+            console.log(`🔍 檢查 Chunk ${index}:`, chunk);
+            if (chunk && chunk.web) {
+                const url = chunk.web.uri;
+                const title = chunk.web.title || 'Untitled';
+                
+                if (url && !seenUrls.has(url)) {
+                    seenUrls.add(url);
+                    references.push({
+                        title: title,
+                        url: url,
+                        uri: url,
+                        snippet: ''
+                    });
+                    console.log(`✅ 添加引用 ${references.length}: ${title} -> ${url}`);
+                } else if (url && seenUrls.has(url)) {
+                    console.log(`⚠️ 重複的 URL，已跳過: ${url}`);
+                } else {
+                    console.log(`⚠️ Chunk ${index} 沒有有效的 URL`);
+                }
+            } else {
+                console.log(`⚠️ Chunk ${index} 沒有 web 屬性:`, chunk);
+            }
+        });
+
+        console.log(`📋 最終提取到 ${references.length} 個有效引用來源`);
+        return references;
+    }
+
+    cleanFootnotesFromText(text) {
+        if (!text) return '';
+        
+        let cleaned = text;
+        
+        // 移除文本中的所有註腳編號 [1], [2], [3] 等（包括連續的如 [1][2]）
+        // 1. 移除單個註腳 [1], [2], [3] 等
+        cleaned = cleaned.replace(/\[\d+\]/g, '');
+        // 2. 移除連續註腳 [1][2][3] 等
+        cleaned = cleaned.replace(/(\[\d+\])+/g, '');
+        // 3. 移除帶空格的註腳 [ 1 ], [ 2 ] 等
+        cleaned = cleaned.replace(/\[\s*\d+\s*\]/g, '');
+        // 4. 移除可能的註腳變體（加強版）
+        cleaned = cleaned.replace(/\[(\d+)\]/g, '');
+        // 5. 移除任何剩餘的數字方括號組合
+        cleaned = cleaned.replace(/\[[\d\s,]+\]/g, '');
+        
+        return cleaned;
     }
 
     formatResponseChunk(chunk) {
