@@ -473,25 +473,49 @@ class StreamingChatApp {
     createReferencesContainer(responseDiv, references) {
         const messageContent = responseDiv.querySelector('.message-content');
         
-        if (!this.showReferencesCheckbox?.checked || !references || references.length < 10) {
+        // 檢查是否已經有引用容器
+        const existingReferences = messageContent.querySelector('.references-section');
+        if (existingReferences) {
+            return existingReferences;
+        }
+        
+        if (!this.showReferencesCheckbox?.checked || !references || references.length === 0) {
             return null;
         }
 
         const referencesDiv = document.createElement('div');
-        referencesDiv.className = 'references-section large-reference-set';
-        referencesDiv.innerHTML = `
-            <div class="references-header">
-                <i class="fas fa-list-alt"></i>
-                <span>引用來源匯總</span>
-                <span class="reference-count">(${references.length} 個來源)</span>
-                <button class="toggle-references" onclick="this.parentElement.parentElement.classList.toggle('collapsed')">
-                    <i class="fas fa-chevron-up"></i>
-                </button>
-            </div>
-            <div class="references-content">
-                ${this.formatLargeReferenceSet(references)}
-            </div>
-        `;
+        
+        // 根據引用數量決定顯示方式
+        if (references.length >= 10) {
+            // 大量引用的緊湊顯示方式
+            referencesDiv.className = 'references-section large-reference-set';
+            referencesDiv.innerHTML = `
+                <div class="references-header">
+                    <i class="fas fa-list-alt"></i>
+                    <span>引用來源匯總</span>
+                    <span class="reference-count">(${references.length} 個來源)</span>
+                    <button class="toggle-references" onclick="this.parentElement.parentElement.classList.toggle('collapsed')">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                </div>
+                <div class="references-content">
+                    ${this.formatLargeReferenceSet(references)}
+                </div>
+            `;
+        } else {
+            // 少量引用的標準顯示方式
+            referencesDiv.className = 'references-section';
+            referencesDiv.innerHTML = `
+                <div class="references-header">
+                    <i class="fas fa-link"></i>
+                    <span>引用來源</span>
+                    <span class="reference-count">(${references.length} 個)</span>
+                </div>
+                <div class="references-content">
+                    ${this.formatStandardReferences(references)}
+                </div>
+            `;
+        }
         
         messageContent.appendChild(referencesDiv);
         this.scrollToBottom();
@@ -599,6 +623,28 @@ class StreamingChatApp {
         // 這裡先專注於把文字抽出來
         if (!payload || typeof payload !== 'object') return false;
 
+        // 檢查是否包含 grounding 資訊
+        if (payload.candidates && payload.candidates[0] && payload.candidates[0].groundingMetadata) {
+            const groundingData = payload.candidates[0].groundingMetadata;
+            if (groundingData.groundingChunks && groundingData.groundingChunks.length > 0) {
+                // 轉換 grounding 資料為引用格式
+                const references = groundingData.groundingChunks.map(chunk => ({
+                    title: chunk.web?.title || 'Web Reference',
+                    url: chunk.web?.uri || '#',
+                    uri: chunk.web?.uri || '#'
+                }));
+                
+                // 如果有引用來源，觸發 grounding 處理
+                if (references.length > 0) {
+                    // 使用現有的引用處理邏輯
+                    const responseDiv = ctx.ensureAnswerContainer().closest('.message.ai-message');
+                    if (responseDiv) {
+                        this.createReferencesContainer(responseDiv, references);
+                    }
+                }
+            }
+        }
+
         const extractTexts = () => {
             // 支援兩型：
             // 1) candidates[0].delta.parts[*].text  (增量)
@@ -647,8 +693,15 @@ class StreamingChatApp {
                     ctx.onThinkingContent(piece.text);
                 }
             } else if (!piece.thought) {
-                // 答案內容 - 但在混合模式下我們跳過，因為會用完整 API
+                // 答案內容
                 hasAnswer = true;
+                // 在串流模式下直接處理答案內容
+                const answerContainer = ctx.ensureAnswerContainer();
+                if (answerContainer) {
+                    const formattedChunk = this.formatResponseChunk(piece.text);
+                    answerContainer.innerHTML += formattedChunk;
+                    this.scrollToBottom();
+                }
             }
         }
 
@@ -796,21 +849,30 @@ class StreamingChatApp {
         // 處理 Markdown 格式 - 即時處理每個chunk
         let formatted = chunk;
         
-        // 處理粗體文字 **text**
-        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
-        // 處理項目符號列表 (行首的 * 空格)
-        formatted = formatted.replace(/^\*\s/gm, '<span style="color: #666;">•</span> ');
-        
-        // 處理數字列表
-        formatted = formatted.replace(/^(\d+)\.\s/gm, '<strong>$1.</strong> ');
-        
         // 移除 Markdown 標題符號 ### ## #
         formatted = formatted.replace(/^#{1,6}\s*/gm, '');
+        
+        // 先處理粗體文字 **text** - 在轉換HTML之前
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<!BOLD!>$1<!ENDBOLD!>');
+        
+        // 先保護項目符號列表的星號 (行首的 * 空格)
+        formatted = formatted.replace(/^\*\s/gm, '<!LISTBULLET!> ');
+        
+        // 移除斜體格式 *text* - 只保留文字內容
+        formatted = formatted.replace(/\*(.*?)\*/g, '$1');
         
         // 轉換為安全的 HTML
         formatted = this.escapeHtml(formatted);
         formatted = formatted.replace(/\n/g, '<br>');
+        
+        // 恢復粗體文字標記
+        formatted = formatted.replace(/&lt;!BOLD!&gt;(.*?)&lt;!ENDBOLD!&gt;/g, '<strong>$1</strong>');
+        
+        // 恢復項目符號列表
+        formatted = formatted.replace(/&lt;!LISTBULLET!&gt;/g, '<span style="color: #666;">•</span>');
+        
+        // 處理數字列表
+        formatted = formatted.replace(/^(\d+)\.\s/gm, '<strong>$1.</strong> ');
         
         // 處理重要標題（以冒號結尾）
         formatted = formatted.replace(/^([^<\n]+：)/gm, '<strong style="color: #2c3e50;">$1</strong>');
@@ -915,6 +977,22 @@ class StreamingChatApp {
         formatted = formatted.replace(/&lt;!LISTBULLET!&gt;/g, '<span style="color: #666;">•</span>');
         
         return formatted;
+    }
+
+    formatStandardReferences(references) {
+        if (!references || references.length === 0) return '';
+        
+        return references.map((ref, index) => `
+            <div class="reference-item">
+                <div class="reference-number">${index + 1}</div>
+                <div class="reference-details">
+                    <a href="${ref.url || ref.uri}" target="_blank" rel="noopener noreferrer" class="reference-title">
+                        ${this.escapeHtml(ref.title)}
+                    </a>
+                    <div class="reference-domain">${this.extractDomain(ref.url || ref.uri)}</div>
+                </div>
+            </div>
+        `).join('');
     }
 
     formatLargeReferenceSet(references) {
