@@ -332,8 +332,8 @@ class StreamingChatApp {
                                 case 'answer_chunk':
                                     if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
                                     if (answerContainer) {
-                                        // 立即處理markdown格式和清理註腳
-                                        const cleanedChunk = this.cleanFootnotesFromText(payload.content);
+                                        // 對每個chunk進行完整的清理處理
+                                        const cleanedChunk = this.cleanCompleteText(payload.content);
                                         const formattedChunk = this.formatResponseChunk(cleanedChunk);
                                         answerContainer.innerHTML += formattedChunk;
                                         this.scrollToBottom();
@@ -680,7 +680,7 @@ class StreamingChatApp {
                 // 在串流模式下直接處理答案內容
                 const answerContainer = ctx.ensureAnswerContainer();
                 if (answerContainer) {
-                    const cleanedChunk = this.cleanFootnotesFromText(piece.text);
+                    const cleanedChunk = this.cleanCompleteText(piece.text);
                     const formattedChunk = this.formatResponseChunk(cleanedChunk);
                     answerContainer.innerHTML += formattedChunk;
                     this.scrollToBottom();
@@ -799,8 +799,8 @@ class StreamingChatApp {
             // 顯示完整答案
             if (result.answer) {
                 console.log('📝 正在顯示答案內容...');
-                // 清理註腳編號並格式化答案
-                const cleanedAnswer = this.cleanFootnotesFromText(result.answer);
+                // 完整清理註腳編號和參考資料列表並格式化答案
+                const cleanedAnswer = this.cleanCompleteText(result.answer);
                 const formattedAnswer = this.formatResponse(cleanedAnswer);
                 answerContainer.innerHTML = formattedAnswer;
                 this.scrollToBottom();
@@ -880,7 +880,8 @@ class StreamingChatApp {
         
         let cleaned = text;
         
-        // 移除文本中的所有註腳編號 [1], [2], [3] 等（包括連續的如 [1][2]）
+        // 第一步：移除文本中的所有註腳編號 [1], [2], [3] 等（包括連續的如 [1][2]）
+        // 多重清理策略，確保移除所有可能的註腳格式
         // 1. 移除單個註腳 [1], [2], [3] 等
         cleaned = cleaned.replace(/\[\d+\]/g, '');
         // 2. 移除連續註腳 [1][2][3] 等
@@ -891,6 +892,69 @@ class StreamingChatApp {
         cleaned = cleaned.replace(/\[(\d+)\]/g, '');
         // 5. 移除任何剩餘的數字方括號組合
         cleaned = cleaned.replace(/\[[\d\s,]+\]/g, '');
+        
+        return cleaned;
+    }
+
+    cleanReferenceListFromText(text) {
+        if (!text) return '';
+        
+        let cleaned = text;
+        
+        // 第二步：移除參考資料列表部分（如果存在於文本末尾）
+        // 核心清理邏輯：直接截斷「參考資料：」字樣及其後的所有內容
+        cleaned = cleaned.replace(/參考資料[：:][\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/引用資料[：:][\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/引用來源[：:][\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/參考來源[：:][\s\S]*$/m, '').trim();
+        
+        // 額外清理各種可能的格式變體，確保徹底移除
+        cleaned = cleaned.replace(/---\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/---\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/---\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/---\s*\n\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/---\s*\n\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/---\s*\n\s*\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+        
+        // 第三步：清理可能產生的多餘空白和換行
+        cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+        
+        return cleaned;
+    }
+
+    // 統一的文本清理方法，結合註腳和參考資料列表清理
+    cleanCompleteText(text) {
+        if (!text) return '';
+        
+        console.log('🧹 開始統一文本清理...');
+        console.log('🔍 清理前文本長度:', text.length);
+        console.log('🔍 清理前文本結尾預覽:', text.substring(Math.max(0, text.length - 200)));
+        
+        // 第一步：移除註腳編號
+        console.log('📝 清理註腳編號...');
+        const beforeFootnoteClean = text.length;
+        let cleaned = this.cleanFootnotesFromText(text);
+        console.log(`✅ 註腳清理完成: 清理前 ${beforeFootnoteClean} 字元，清理後 ${cleaned.length} 字元`);
+        
+        // 第二步：移除參考資料列表
+        console.log('📚 清理參考資料列表...');
+        const beforeRefClean = cleaned.length;
+        cleaned = this.cleanReferenceListFromText(cleaned);
+        
+        if (beforeRefClean !== cleaned.length) {
+            console.log(`✅ 移除參考資料列表: 清理前 ${beforeRefClean} 字元，清理後 ${cleaned.length} 字元`);
+        } else {
+            console.log('ℹ️  未發現參考資料列表，無需清理');
+        }
+        
+        console.log('🧹 清理後文本長度:', cleaned.length);
+        console.log('🔍 清理後文本結尾預覽:', cleaned.substring(Math.max(0, cleaned.length - 200)));
+        console.log('✅ 統一文本清理完成，註腳和參考資料列表已移除');
         
         return cleaned;
     }
