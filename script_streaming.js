@@ -237,7 +237,7 @@ class StreamingChatApp {
                 },
                 body: JSON.stringify({
                     question: question,
-                    enableSearch: !!(this.enableSearchCheckbox && this.enableSearchCheckbox.checked),
+                    enableSearch: false,  // 思考階段不使用搜尋
                     showThinking: !!(this.showThinkingCheckbox && this.showThinkingCheckbox.checked),
                     sessionId: this.sessionId
                 })
@@ -326,7 +326,11 @@ class StreamingChatApp {
                                     break;
                                 case 'answer_chunk':
                                     if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
-                                    if (answerContainer) this.appendToContainer(answerContainer, payload.content);
+                                    if (answerContainer) {
+                                        // 直接附加內容，不進行格式化
+                                        answerContainer.innerHTML += payload.content;
+                                        this.scrollToBottom();
+                                    }
                                     break;
                                 case 'grounding':
                                     if (payload.references?.length) {
@@ -334,6 +338,13 @@ class StreamingChatApp {
                                     }
                                     break;
                                 case 'complete':
+                                    // 在完整回答完成後，格式化內容
+                                    if (answerContainer) {
+                                        const rawContent = answerContainer.innerHTML;
+                                        const formattedContent = this.formatResponse(rawContent);
+                                        answerContainer.innerHTML = formattedContent;
+                                    }
+                                    
                                     const code = this.generateSessionCode({
                                         originalQuestion: question,
                                         thinking: this.showThinkingCheckbox?.checked,
@@ -480,10 +491,8 @@ class StreamingChatApp {
 
     appendToContainer(container, content) {
         if (container) {
-            // 格式化內容（如果是回答內容）
-            const formattedContent = container.closest('.response-section') ? 
-                this.formatResponse(content) : content;
-            container.innerHTML += formattedContent;
+            // 直接附加內容，不進行任何格式化
+            container.innerHTML += content;
             this.scrollToBottom();
         }
     }
@@ -677,7 +686,7 @@ class StreamingChatApp {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    text: text,
+                    q: text,  // 修正參數名稱為 q
                     targetLanguage: 'zh-TW'
                 })
             });
