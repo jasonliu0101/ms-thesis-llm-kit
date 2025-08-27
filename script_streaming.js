@@ -317,6 +317,12 @@ class StreamingChatApp {
                                     }
                                     break;
                                 case 'thinking_end':
+                                    console.log('🎯 思考階段結束，開始獲取完整答案');
+                                    // 隱藏思考中的串流指示器
+                                    const streamingIndicator = responseDiv.querySelector('.streaming-indicator');
+                                    if (streamingIndicator) {
+                                        streamingIndicator.style.display = 'none';
+                                    }
                                     // 思考結束後，呼叫完整的 API 獲取答案和引用
                                     this.fetchCompleteAnswer(question, responseDiv);
                                     shouldStop = true; // 串流結束，改用完整 API
@@ -438,6 +444,12 @@ class StreamingChatApp {
 
     createAnswerContainer(responseDiv) {
         const messageContent = responseDiv.querySelector('.message-content');
+        
+        // 檢查是否已經有答案容器
+        let existingAnswerContainer = messageContent.querySelector('.response-section');
+        if (existingAnswerContainer) {
+            return existingAnswerContainer.querySelector('.response-content');
+        }
         
         // 隱藏思考中的串流指示器
         const streamingIndicator = responseDiv.querySelector('.streaming-indicator');
@@ -652,29 +664,41 @@ class StreamingChatApp {
     }
 
     async translateAndAppendThinking(container, content) {
-        // 直接顯示英文內容（即時），但先格式化
-        const formattedContent = this.formatThinking(content);
-        container.innerHTML += formattedContent;
+        // 創建一個唯一的 ID 來標識這段內容
+        const contentId = `thinking-content-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // 先顯示一個佔位符，避免用戶看到英文
+        const placeholder = '<div class="translating-placeholder" data-content-id="' + contentId + '">正在翻譯思考內容...</div>';
+        container.innerHTML += placeholder;
         this.scrollToBottom();
         
         try {
             // 非同步翻譯為中文
             const translatedContent = await this.translateText(content);
-            if (translatedContent && translatedContent !== content) {
-                // 格式化翻譯後的內容
-                const formattedTranslated = this.formatThinking(translatedContent);
-                // 替換最後一段內容
-                const lastContentIndex = container.innerHTML.lastIndexOf(formattedContent);
-                if (lastContentIndex !== -1) {
-                    container.innerHTML = container.innerHTML.substring(0, lastContentIndex) + 
-                                        formattedTranslated + 
-                                        container.innerHTML.substring(lastContentIndex + formattedContent.length);
-                    this.scrollToBottom();
-                }
+            const finalContent = translatedContent || content;
+            
+            // 格式化翻譯後的內容
+            const formattedContent = this.formatThinking(finalContent);
+            
+            // 找到並替換佔位符
+            const placeholderElement = container.querySelector(`[data-content-id="${contentId}"]`);
+            if (placeholderElement) {
+                placeholderElement.outerHTML = formattedContent;
+                this.scrollToBottom();
+            } else {
+                // 如果找不到佔位符，直接附加到容器末尾
+                container.innerHTML += formattedContent;
+                this.scrollToBottom();
             }
         } catch (error) {
             console.warn('翻譯思考內容失敗:', error);
-            // 翻譯失敗時保留英文內容
+            // 翻譯失敗時，用原文替換佔位符
+            const formattedContent = this.formatThinking(content);
+            const placeholderElement = container.querySelector(`[data-content-id="${contentId}"]`);
+            if (placeholderElement) {
+                placeholderElement.outerHTML = formattedContent;
+                this.scrollToBottom();
+            }
         }
     }
 
@@ -705,8 +729,7 @@ class StreamingChatApp {
 
     async fetchCompleteAnswer(question, responseDiv) {
         try {
-            // 創建答案容器
-            const answerContainer = this.createAnswerContainer(responseDiv);
+            console.log('🔄 開始獲取完整答案...');
             
             // 呼叫完整的 API（與 Case A/B 相同）
             const response = await fetch(`${this.workerUrl}/`, {
@@ -726,14 +749,27 @@ class StreamingChatApp {
             }
 
             const result = await response.json();
+            console.log('✅ 完整答案 API 回應:', result);
+            
+            // 創建答案容器（如果還沒有的話）
+            let answerContainer = responseDiv.querySelector('.response-content');
+            if (!answerContainer) {
+                answerContainer = this.createAnswerContainer(responseDiv);
+            }
             
             // 顯示完整答案
             if (result.answer) {
-                this.appendToContainer(answerContainer, result.answer);
+                console.log('📝 正在顯示答案內容...');
+                const formattedAnswer = this.formatResponse(result.answer);
+                answerContainer.innerHTML = formattedAnswer;
+                this.scrollToBottom();
+            } else {
+                console.warn('⚠️ 沒有收到答案內容');
             }
 
             // 顯示引用來源
             if (result.references && result.references.length > 0) {
+                console.log('📚 顯示引用來源:', result.references.length, '個');
                 this.createReferencesContainer(responseDiv, result.references);
             }
 
@@ -746,7 +782,7 @@ class StreamingChatApp {
             this.showSessionCode(responseDiv, code);
 
         } catch (error) {
-            console.error('完整答案請求錯誤:', error);
+            console.error('❌ 完整答案請求錯誤:', error);
             this.showErrorInResponse(responseDiv, `獲取完整答案時發生錯誤: ${error.message}`);
         }
     }

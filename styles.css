@@ -2975,3 +2975,19 @@ sup {
         padding: 12px;
     }
 }
+
+/* 翻譯佔位符樣式 */
+.translating-placeholder {
+    color: #666;
+    font-style: italic;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    margin: 4px 0;
+    animation: translatePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes translatePulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
