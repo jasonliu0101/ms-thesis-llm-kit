@@ -733,15 +733,21 @@ class StreamingChatApp {
         
         const thinkingDiv = document.createElement('div');
         thinkingDiv.className = 'thinking-section';
+        const thinkingId = 'thinking-' + Date.now();
         thinkingDiv.innerHTML = `
-            <div class="thinking-header">
-                <i class="fas fa-brain"></i>
-                <span>思考流程</span>
-                <div class="streaming-indicator">
-                    <i class="fas fa-circle-notch fa-spin"></i>
+            <div class="thinking-header" onclick="window.chatAppStreaming.toggleThinkingSection('${thinkingId}')">
+                <div class="thinking-header-left">
+                    <i class="fas fa-brain"></i>
+                    <span>思考流程</span>
+                </div>
+                <div class="thinking-header-right">
+                    <div class="streaming-indicator">
+                        <i class="fas fa-circle-notch fa-spin"></i>
+                    </div>
+                    <i class="fas fa-chevron-down thinking-toggle-icon"></i>
                 </div>
             </div>
-            <div class="thinking-content">
+            <div class="thinking-content" id="${thinkingId}" style="display: block;">
             </div>
         `;
         
@@ -1593,13 +1599,27 @@ class StreamingChatApp {
         div.textContent = text;
         return div.innerHTML;
     }
+
+    toggleThinkingSection(thinkingId) {
+        const thinkingContent = document.getElementById(thinkingId);
+        const toggleIcon = thinkingContent.closest('.thinking-section').querySelector('.thinking-toggle-icon');
+        
+        if (thinkingContent.style.display === 'none') {
+            thinkingContent.style.display = 'block';
+            toggleIcon.className = 'fas fa-chevron-down thinking-toggle-icon';
+        } else {
+            thinkingContent.style.display = 'none';
+            toggleIcon.className = 'fas fa-chevron-right thinking-toggle-icon';
+        }
+    }
 }
 
 // 初始化應用程式
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 DOM 載入完成，初始化 StreamingChatApp...');
     try {
-        window.chatApp = new StreamingChatApp();
+        window.chatAppStreaming = new StreamingChatApp();
+        window.chatApp = window.chatAppStreaming; // 保持向後兼容
         console.log('✅ StreamingChatApp 初始化成功');
     } catch (error) {
         console.error('❌ StreamingChatApp 初始化失敗:', error);

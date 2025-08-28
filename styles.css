@@ -1772,11 +1772,43 @@ sup {
     font-weight: 600;
     font-size: 0.9rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
 .thinking-header {
     background: rgba(102, 126, 234, 0.1);
     color: #667eea;
+}
+
+.thinking-header:hover {
+    background: rgba(102, 126, 234, 0.15);
+}
+
+.thinking-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.thinking-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.thinking-toggle-icon {
+    transition: transform 0.2s ease;
+    font-size: 0.8em;
+    color: #667eea;
+}
+
+.thinking-toggle-icon.fa-chevron-right {
+    transform: rotate(0deg);
+}
+
+.thinking-toggle-icon.fa-chevron-down {
+    transform: rotate(0deg);
 }
 
 .references-header {
@@ -2777,11 +2809,15 @@ sup {
     align-items: center;
     gap: 5px;
     color: #667eea;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
 .streaming-indicator.complete {
     color: #28a745;
+}
+
+.thinking-header .streaming-indicator {
+    font-size: 0.8rem;
 }
 
 .thinking-indicator, .answer-indicator {
