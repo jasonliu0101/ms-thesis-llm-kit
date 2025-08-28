@@ -323,6 +323,11 @@ class StreamingChatApp {
                     console.log('🔚 思考階段結束，隱藏串流指示器');
                     const ind = responseDiv.querySelector('.streaming-indicator');
                     if (ind) ind.style.display = 'none';
+                    
+                    // 思考階段結束後，立即創建答案容器並顯示處理中狀態
+                    console.log('⚡ 思考結束，立即顯示答案處理中...');
+                    const answerContainer = this.createAnswerContainer(responseDiv);
+                    this.showAnswerProcessing(answerContainer);
                 },
                 // 忽略答案階段 - 答案內容將被隱藏
                 onAnswerStart: () => {
@@ -606,12 +611,19 @@ class StreamingChatApp {
         try {
             const { answerText, references } = answerData;
             
-            // 創建答案容器並顯示處理中狀態
-            answerContainer = this.createAnswerContainer(responseDiv);
-            this.showAnswerProcessing(answerContainer);
+            // 尋找已存在的答案容器（應該在 onThinkingEnd 時已創建）
+            answerContainer = responseDiv.querySelector('.response-section .response-content');
             
-            // 模擬短暫處理時間以顯示loading狀態
-            await new Promise(resolve => setTimeout(resolve, 800));
+            if (!answerContainer) {
+                console.log('⚠️ 未找到現有答案容器，創建新的');
+                answerContainer = this.createAnswerContainer(responseDiv);
+                this.showAnswerProcessing(answerContainer);
+            }
+            
+            // 模擬短暫處理時間以顯示loading狀態（如果還在顯示處理中狀態）
+            if (answerContainer.querySelector('.processing-indicator')) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
             
             // 清除處理中狀態
             this.clearAnswerProcessing(answerContainer);
