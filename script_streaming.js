@@ -230,6 +230,29 @@ class StreamingChatApp {
         const responseDiv = this.createResponseContainer();
         
         try {
+            // === Case C 混合模式：和 Case A 一樣的兩階段處理 ===
+            // 第一階段：Thinking streaming（不使用搜尋）
+            // 第二階段：Answer complete response（使用搜尋）
+            
+            console.log('🧠 開始 Case C 混合模式...');
+            
+            // === 第一階段：Thinking 階段（不使用搜尋） ===
+            console.log('📝 第一階段：Thinking 流程（純邏輯推理）');
+            await this.processThinkingPhase(question, responseDiv);
+            
+            // === 第二階段：Answer 階段（使用搜尋） ===  
+            console.log('💡 第二階段：Answer 流程（結合網路搜尋）');
+            await this.processAnswerPhase(question, responseDiv);
+            
+        } catch (error) {
+            console.error('混合模式處理錯誤:', error);
+            this.displayError(error.message, responseDiv);
+        }
+    }
+
+    // 新增：處理 Thinking 階段的串流
+    async processThinkingPhase(question, responseDiv) {
+        try {
             const response = await fetch(`${this.workerUrl}/stream-gemini`, {
                 method: 'POST',
                 headers: {
@@ -237,246 +260,138 @@ class StreamingChatApp {
                 },
                 body: JSON.stringify({
                     question: question,
-                    enableSearch: !!(this.enableSearchCheckbox && this.enableSearchCheckbox.checked),  // 使用設定決定是否搜尋
-                    showThinking: !!(this.showThinkingCheckbox && this.showThinkingCheckbox.checked),
+                    enableSearch: false,  // Thinking 階段：不使用搜尋
+                    showThinking: true,   // 強制顯示 thinking
                     sessionId: this.sessionId
                 })
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(`Thinking API error: ${response.status} ${response.statusText}`);
             }
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             
             let thinkingContainer = null;
-            let answerContainer = null;
-            let referencesContainer = null;
-            let collectedReferences = [];  // 收集所有引用來源
-            let isInReferenceSection = false; // 追踪是否進入參考資料區段
-            
             let buf = '';
-            let eventBuf = []; // 暫存單一 SSE 事件的多行
             let shouldStop = false;
 
+            console.log('🎬 開始處理 Thinking 串流...');
+
             try {
-                while (true && !shouldStop) {
+                while (!shouldStop) {
                     const { done, value } = await reader.read();
                     if (done) break;
-                    
+
                     buf += decoder.decode(value, { stream: true });
 
-                    // 依據 SSE 規格，事件以「空白行」結束（\n\n 或 \r\n\r\n）
                     let sep;
                     while ((sep = buf.search(/\r?\n\r?\n/)) !== -1) {
-                        const rawEvent = buf.slice(0, sep);     // 這是一個完整事件（可能多行 data:）
+                        const rawEvent = buf.slice(0, sep);
                         buf = buf.slice(sep + (buf[sep] === '\r' ? 4 : 2));
 
-                        // 將多行 data: 合併
                         const dataLines = rawEvent
                             .split(/\r?\n/)
-                            .filter(l => l.startsWith('data:'))   // 允許 'data:' 或 'data: ' 兩者
+                            .filter(l => l.startsWith('data:'))
                             .map(l => l.replace(/^data:\s?/, ''));
 
-                        if (dataLines.length === 0) {
-                            // 可能是註解行（: ping）或其他欄位，略過
-                            continue;
-                        }
+                        if (dataLines.length === 0) continue;
 
-                        const dataStr = dataLines.join('\n');   // 多行合併成一個 payload
-                        
-                        // 輸出完整且原始的 API 回應
-                        console.log('📡 原始 API 回應:', dataStr);
+                        const dataStr = dataLines.join('\n');
+                        console.log('📡 Thinking 原始回應:', dataStr);
                         
                         if (dataStr === '[DONE]') {
-                            // 結束：停止外層讀取、更新 UI
                             shouldStop = true;
-                            // 顯示完成
-                            const code = this.generateSessionCode({
-                                originalQuestion: question,
-                                thinking: this.showThinkingCheckbox?.checked,
-                                references: collectedReferences
-                            });
-                            this.showSessionCode(responseDiv, code);
+                            console.log('✅ Thinking 階段完成');
                             break;
                         }
 
-                        let payload;
                         try {
-                            payload = JSON.parse(dataStr);
-                        } catch (e) {
-                            console.warn('SSE JSON 解析失敗，原始：', dataStr);
-                            continue;
-                        }
-
-                        // 如果是你自訂的協議（有 type），照舊處理
-                        if (payload && typeof payload === 'object' && 'type' in payload) {
-                            switch (payload.type) {
-                                case 'thinking_start':
+                            const payload = JSON.parse(dataStr);
+                            
+                            if (payload.type === 'thinking_chunk') {
+                                if (!thinkingContainer) {
                                     thinkingContainer = this.createThinkingContainer(responseDiv);
-                                    break;
-                                case 'thinking_chunk':
-                                    if (thinkingContainer && this.showThinkingCheckbox?.checked) {
-                                        // 翻譯思考內容為中文
-                                        this.translateAndAppendThinking(thinkingContainer, payload.content);
-                                    }
-                                    break;
-                                case 'thinking_end':
-                                    console.log('🎯 思考階段結束，繼續等待串流回答');
-                                    // 隱藏思考中的串流指示器
-                                    const streamingIndicator = responseDiv.querySelector('.streaming-indicator');
-                                    if (streamingIndicator) {
-                                        streamingIndicator.style.display = 'none';
-                                    }
-                                    // 不要調用 fetchCompleteAnswer，讓串流繼續
-                                    break;
-                                case 'answer_start':
-                                    if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
-                                    break;
-                                case 'answer_chunk':
-                                    if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
-                                    if (answerContainer) {
-                                        // 如果引用來源數量 < 10，進行參考資料檢測和過濾
-                                        if (collectedReferences.length < 10) {
-                                            // 如果已經進入參考資料區段，直接跳過所有後續chunk
-                                            if (isInReferenceSection) {
-                                                console.log('🚫 已進入參考資料區段，跳過chunk:', payload.content.substring(0, 50) + '...');
-                                                break; // 跳出 switch，不處理這個 answer_chunk
-                                            }
-                                            
-                                            // 檢查是否包含參考資料標題的模式
-                                            const referencePatterns = [
-                                                // 換行開頭的參考資料標題
-                                                /\n\s*參考資料[：:]/,
-                                                /\n\s*引用來源[：:]/,
-                                                /\n\s*參考資料來源[：:]/,
-                                                /\n\s*參考資料與來源[：:]/,
-                                                /\n\s*\*\*參考資料\*\*[：:]/,
-                                                /\n\s*\*\*引用來源\*\*[：:]/,
-                                                /\n\s*\*\*參考資料來源\*\*[：:]/,
-                                                /\n\s*\*\*參考資料與來源\*\*[：:]/,
-                                                /\n\s*## 參考資料/,
-                                                /\n\s*## 引用來源/,
-                                                /\n\s*---\s*\n\s*參考資料[：:]/,
-                                                /\n\s*---\s*\n\s*\*\*參考資料\*\*[：:]/,
-                                                /\n\s*---\s*\n\s*\*\*參考資料來源\*\*[：:]/
-                                            ];
-                                            
-                                            let contentToProcess = payload.content;
-                                            let foundReferenceStart = false;
-                                            
-                                            // 檢測是否包含參考資料標題，並找到位置
-                                            for (const pattern of referencePatterns) {
-                                                const match = pattern.exec(payload.content);
-                                                if (match) {
-                                                    console.log('🚫 檢測到參考資料標題，進入參考資料區段模式');
-                                                    console.log('📍 參考資料開始位置:', match.index);
-                                                    console.log('✂️ 保留內容:', payload.content.substring(0, match.index));
-                                                    
-                                                    // 只保留參考資料標題之前的內容
-                                                    contentToProcess = payload.content.substring(0, match.index);
-                                                    isInReferenceSection = true;
-                                                    foundReferenceStart = true;
-                                                    break;
-                                                }
-                                            }
-                                            
-                                            // 處理內容（如果有的話）
-                                            if (contentToProcess.trim()) {
-                                                const cleanedChunk = this.cleanCompleteText(contentToProcess);
-                                                if (cleanedChunk.trim()) {
-                                                    const formattedChunk = this.formatResponseChunk(cleanedChunk);
-                                                    answerContainer.innerHTML += formattedChunk;
-                                                    this.scrollToBottom();
-                                                }
-                                            }
-                                            
-                                            // 如果找到參考資料標題，後續就不處理了
-                                            if (foundReferenceStart) {
-                                                break;
-                                            }
-                                        } else {
-                                            // 引用來源數量 >= 10，正常處理所有內容
-                                            const cleanedChunk = this.cleanCompleteText(payload.content);
-                                            if (cleanedChunk.trim()) {
-                                                const formattedChunk = this.formatResponseChunk(cleanedChunk);
-                                                answerContainer.innerHTML += formattedChunk;
-                                                this.scrollToBottom();
-                                            }
-                                        }
-                                    }
-                                    break;
-                                case 'grounding':
-                                    if (payload.references?.length) {
-                                        collectedReferences = collectedReferences.concat(payload.references);
-                                        console.log('🔗 收集 grounding 引用來源:', payload.references.length, '個');
-                                    }
-                                    break;
-                                case 'complete':
-                                    // 顯示引用來源（採用 Case A 的邏輯：≥10 才顯示）
-                                    if (collectedReferences.length >= 10) {
-                                        this.createReferencesContainer(responseDiv, collectedReferences);
-                                    } else {
-                                        console.log(`📋 引用來源數量 ${collectedReferences.length} < 10，隱藏引用區塊`);
-                                    }
-                                    
-                                    const code = this.generateSessionCode({
-                                        originalQuestion: question,
-                                        thinking: this.showThinkingCheckbox?.checked,
-                                        references: collectedReferences
-                                    });
-                                    this.showSessionCode(responseDiv, code);
-                                    shouldStop = true; // 完成後停止讀取
-                                    break;
-                                case 'error':
-                                    throw new Error(payload.message || '串流處理錯誤');
-                            }
-                        } else {
-                            // 否則視為「Gemini 原生 SSE」事件 - 檢查 grounding 資訊
-                            if (payload.candidates && payload.candidates[0] && payload.candidates[0].groundingMetadata) {
-                                const references = this.extractReferences(payload.candidates[0].groundingMetadata);
-                                if (references.length > 0) {
-                                    collectedReferences = collectedReferences.concat(references);
-                                    console.log('🔗 從 Gemini payload 提取引用來源:', references.length, '個');
+                                }
+                                
+                                if (thinkingContainer && payload.content) {
+                                    // 翻譯思考內容
+                                    const translatedContent = await this.translateText(payload.content);
+                                    const formattedContent = this.formatThinkingChunk(translatedContent);
+                                    thinkingContainer.innerHTML += formattedContent;
+                                    this.scrollToBottom();
                                 }
                             }
-
-                            const didAppend = this.handleGeminiPayload(payload, {
-                                ensureThinkingContainer: () => {
-                                    if (!thinkingContainer) thinkingContainer = this.createThinkingContainer(responseDiv);
-                                    return thinkingContainer;
-                                },
-                                ensureAnswerContainer: () => {
-                                    if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
-                                    return answerContainer;
-                                },
-                                showThinking: !!(this.showThinkingCheckbox && this.showThinkingCheckbox.checked),
-                                onThinkingContent: (content) => {
-                                    // 確保思考容器存在，然後翻譯思考內容
-                                    if (!thinkingContainer) thinkingContainer = this.createThinkingContainer(responseDiv);
-                                    if (this.showThinkingCheckbox?.checked) {
-                                        this.translateAndAppendThinking(thinkingContainer, content);
-                                    }
-                                },
-                                onThinkingEnd: () => {
-                                    // 思考結束，呼叫完整 API
-                                    this.fetchCompleteAnswer(question, responseDiv);
-                                    shouldStop = true;
-                                }
-                            });
-
-                            // 依需要也可以這裡觀察安全性封鎖/回饋等
+                        } catch (parseError) {
+                            console.warn('解析 thinking payload 失敗:', parseError, dataStr);
                         }
                     }
                 }
             } finally {
                 reader.releaseLock();
             }
-
+            
         } catch (error) {
-            console.error('串流請求錯誤:', error);
-            this.showErrorInResponse(responseDiv, error.message);
+            console.error('Thinking 階段錯誤:', error);
+            throw error;
+        }
+    }
+
+    // 新增：處理 Answer 階段的完整回應
+    async processAnswerPhase(question, responseDiv) {
+        try {
+            console.log('📞 呼叫 Answer API（使用搜尋）...');
+            
+            const response = await fetch(`${this.workerUrl}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    question: question,
+                    enableSearch: true,  // Answer 階段：使用搜尋
+                    sessionId: this.sessionId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Answer API error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('💬 收到 Answer 回應');
+
+            // 處理回應內容
+            if (data.answer) {
+                // 創建 Answer 容器
+                const answerContainer = this.createAnswerContainer(responseDiv);
+                
+                // 翻譯並顯示答案
+                const translatedAnswer = await this.translateText(data.answer);
+                const cleanedAnswer = this.cleanCompleteText(translatedAnswer);
+                const formattedAnswer = this.formatResponseChunk(cleanedAnswer);
+                answerContainer.innerHTML += formattedAnswer;
+                
+                // 處理引用來源
+                if (data.references && data.references.length > 0) {
+                    console.log('📚 處理引用來源:', data.references.length, '個');
+                    
+                    // 檢查是否應該顯示引用來源（≥10個才顯示）
+                    if (data.references.length >= 10) {
+                        const referencesContainer = this.createReferencesContainer(responseDiv);
+                        this.displayReferences(data.references, referencesContainer);
+                    } else {
+                        console.log('📊 引用來源數量 < 10，不顯示引用區塊');
+                    }
+                }
+                
+                this.scrollToBottom();
+            }
+            
+        } catch (error) {
+            console.error('Answer 階段錯誤:', error);
+            throw error;
         }
     }
 
