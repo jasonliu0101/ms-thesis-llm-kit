@@ -230,21 +230,28 @@ class StreamingChatApp {
         const responseDiv = this.createResponseContainer();
         
         try {
-            // === Case C 順序模式：先思考，再處理答案 ===
-            console.log('🧠 開始 Case C 順序模式（先思考後答案）...');
+            // === Case C 混合模式：併發執行請求，但順序顯示結果 ===
+            console.log('🧠 開始 Case C 混合模式（併發請求，順序顯示）...');
             
-            // 第一階段：先完成 Thinking streaming（不使用搜尋）
-            console.log('📝 階段一：開始思考階段...');
-            await this.processThinkingPhase(question, responseDiv);
-            console.log('✅ 階段一：思考階段完成');
+            // 併發執行兩個階段的請求，但控制顯示時機
+            const [thinkingResult, answerResult] = await Promise.allSettled([
+                // 第一階段：Thinking streaming（不使用搜尋）
+                this.processThinkingPhase(question, responseDiv),
+                // 第二階段：Answer complete response（使用搜尋）- 靜默執行
+                this.processAnswerPhaseBackground(question, responseDiv)
+            ]);
             
-            // 第二階段：思考完成後再處理 Answer complete response（使用搜尋）
-            console.log('💬 階段二：開始答案階段...');
-            await this.processAnswerPhase(question, responseDiv);
-            console.log('✅ 階段二：答案階段完成');
+            // 思考階段完成後，顯示答案處理並展示結果
+            console.log('✅ 思考階段完成，開始顯示答案...');
+            if (answerResult.status === 'fulfilled') {
+                await this.displayAnswerResult(responseDiv, answerResult.value, question);
+            } else {
+                console.error('❌ 答案階段失敗:', answerResult.reason);
+                throw answerResult.reason;
+            }
             
         } catch (error) {
-            console.error('順序模式處理錯誤:', error);
+            console.error('混合模式處理錯誤:', error);
             this.showErrorInResponse(responseDiv, error.message);
         }
     }
@@ -516,6 +523,139 @@ class StreamingChatApp {
             if (answerContainer) {
                 this.clearAnswerProcessing(answerContainer);
                 answerContainer.innerHTML = `<div class="error-message">答案階段發生錯誤: ${error.message}</div>`;
+            }
+            
+            throw error;
+        }
+    }
+
+    // 新增：背景執行答案階段（不顯示處理狀態）
+    async processAnswerPhaseBackground(question, responseDiv) {
+        try {
+            console.log('🔄 背景執行 Answer API（使用搜尋）...');
+            
+            const response = await fetch(`${this.workerUrl}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    question: question,
+                    enableSearch: true,  // Answer 階段：使用搜尋
+                    sessionId: this.sessionId,
+                    options: {
+                        caseType: 'streaming',
+                        isStreamingAnswer: true
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Answer API error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('💬 背景收到 Answer 回應，完整數據結構:', JSON.stringify(data, null, 2));
+
+            // 解析回應內容但不顯示
+            let answerText = null;
+            let references = [];
+            
+            if (data.candidates && data.candidates[0]) {
+                const candidate = data.candidates[0];
+                
+                // 提取答案文本（排除思考內容）
+                if (candidate.content && candidate.content.parts) {
+                    const nonThoughtParts = candidate.content.parts.filter(part => 
+                        part.text && part.thought !== true
+                    );
+                    if (nonThoughtParts.length > 0) {
+                        answerText = nonThoughtParts[nonThoughtParts.length - 1].text;
+                        console.log('💬 背景提取到答案文本，長度:', answerText.length);
+                    }
+                }
+                
+                // 提取引用來源
+                if (candidate.groundingMetadata && candidate.groundingMetadata.groundingChunks) {
+                    references = candidate.groundingMetadata.groundingChunks.map(chunk => ({
+                        title: chunk.web?.title || '未知來源',
+                        uri: chunk.web?.uri || '#',
+                        snippet: chunk.content || ''
+                    }));
+                    console.log('🔗 背景提取到引用來源:', references.length, '個');
+                }
+            }
+
+            // 返回處理好的數據，不顯示
+            return {
+                answerText,
+                references,
+                question
+            };
+            
+        } catch (error) {
+            console.error('背景 Answer 階段錯誤:', error);
+            throw error;
+        }
+    }
+
+    // 新增：顯示答案結果（在思考完成後）
+    async displayAnswerResult(responseDiv, answerData, question) {
+        let answerContainer = null;
+        
+        try {
+            const { answerText, references } = answerData;
+            
+            // 創建答案容器並顯示處理中狀態
+            answerContainer = this.createAnswerContainer(responseDiv);
+            this.showAnswerProcessing(answerContainer);
+            
+            // 模擬短暫處理時間以顯示loading狀態
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // 清除處理中狀態
+            this.clearAnswerProcessing(answerContainer);
+
+            // 顯示答案內容
+            if (answerText) {
+                // 翻譯並顯示答案
+                const translatedAnswer = await this.translateText(answerText);
+                const cleanedAnswer = this.cleanCompleteText(translatedAnswer);
+                const formattedAnswer = this.formatResponseChunk(cleanedAnswer);
+                answerContainer.innerHTML = formattedAnswer;
+                
+                // 處理引用來源
+                if (references && references.length > 0) {
+                    console.log('📚 顯示引用來源:', references.length, '個');
+                    
+                    // 檢查是否應該顯示引用來源（≥10個才顯示）
+                    if (references.length >= 10) {
+                        this.createReferencesContainer(responseDiv, references);
+                    } else {
+                        console.log('📊 引用來源數量 < 10，不顯示引用區塊');
+                    }
+                }
+                
+                // 生成並顯示 session code
+                const code = this.generateSessionCode({
+                    originalQuestion: question,
+                    thinking: true,
+                    references: references || []
+                });
+                this.showSessionCode(responseDiv, code);
+                
+                this.scrollToBottom();
+            } else {
+                console.warn('⚠️ 沒有找到答案文本');
+                answerContainer.innerHTML = '<div class="error-message">未能取得完整回應內容</div>';
+            }
+            
+        } catch (error) {
+            console.error('顯示答案結果錯誤:', error);
+            
+            if (answerContainer) {
+                this.clearAnswerProcessing(answerContainer);
+                answerContainer.innerHTML = `<div class="error-message">顯示答案時發生錯誤: ${error.message}</div>`;
             }
             
             throw error;
