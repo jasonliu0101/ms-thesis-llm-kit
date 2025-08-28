@@ -254,6 +254,7 @@ class StreamingChatApp {
             let answerContainer = null;
             let referencesContainer = null;
             let collectedReferences = [];  // 收集所有引用來源
+            let isInReferenceSection = false; // 追踪是否進入參考資料區段
             
             let buf = '';
             let eventBuf = []; // 暫存單一 SSE 事件的多行
@@ -332,11 +333,17 @@ class StreamingChatApp {
                                 case 'answer_chunk':
                                     if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
                                     if (answerContainer) {
-                                        // 如果引用來源數量 < 10，檢查是否包含參考資料相關內容
-                                        let shouldSkip = false;
+                                        // 如果引用來源數量 < 10，進行參考資料檢測和過濾
                                         if (collectedReferences.length < 10) {
+                                            // 如果已經進入參考資料區段，直接跳過所有後續chunk
+                                            if (isInReferenceSection) {
+                                                console.log('🚫 已進入參考資料區段，跳過chunk:', payload.content.substring(0, 50) + '...');
+                                                break;
+                                            }
+                                            
                                             // 檢查是否包含參考資料標題的模式
                                             const referencePatterns = [
+                                                // 換行開頭的參考資料標題
                                                 /\n\s*參考資料[：:]/,
                                                 /\n\s*引用來源[：:]/,
                                                 /\n\s*參考資料來源[：:]/,
@@ -346,26 +353,36 @@ class StreamingChatApp {
                                                 /\n\s*## 參考資料/,
                                                 /\n\s*## 引用來源/,
                                                 /\n\s*---\s*\n\s*參考資料[：:]/,
-                                                /參考資料[：:]\s*\n/
+                                                // 任何位置的參考資料標題（包括前面有文字的情況）
+                                                /參考資料[：:]/,
+                                                /引用來源[：:]/,
+                                                /參考資料來源[：:]/,
+                                                /參考資料與來源[：:]/,
+                                                /\*\*參考資料\*\*[：:]/,
+                                                /\*\*引用來源\*\*[：:]/
                                             ];
                                             
+                                            // 檢測是否進入參考資料區段
                                             for (const pattern of referencePatterns) {
                                                 if (pattern.test(payload.content)) {
-                                                    console.log('🚫 檢測到參考資料標題，跳過此chunk:', payload.content.substring(0, 50) + '...');
-                                                    shouldSkip = true;
+                                                    console.log('🚫 檢測到參考資料標題，進入參考資料區段模式，跳過此及後續chunk:', payload.content.substring(0, 100) + '...');
+                                                    isInReferenceSection = true;
                                                     break;
                                                 }
                                             }
+                                            
+                                            // 如果檢測到參考資料標題，跳過這個chunk
+                                            if (isInReferenceSection) {
+                                                break;
+                                            }
                                         }
                                         
-                                        if (!shouldSkip) {
-                                            // 對每個chunk進行完整的清理處理
-                                            const cleanedChunk = this.cleanCompleteText(payload.content);
-                                            if (cleanedChunk.trim()) {
-                                                const formattedChunk = this.formatResponseChunk(cleanedChunk);
-                                                answerContainer.innerHTML += formattedChunk;
-                                                this.scrollToBottom();
-                                            }
+                                        // 對每個chunk進行完整的清理處理
+                                        const cleanedChunk = this.cleanCompleteText(payload.content);
+                                        if (cleanedChunk.trim()) {
+                                            const formattedChunk = this.formatResponseChunk(cleanedChunk);
+                                            answerContainer.innerHTML += formattedChunk;
+                                            this.scrollToBottom();
                                         }
                                     }
                                     break;
