@@ -1,3 +1,10 @@
+/* Debug: 確保思考區塊可見 */
+.thinking-section {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
 * {
     margin: 0;
     padding: 0;

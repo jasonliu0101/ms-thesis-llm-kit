@@ -269,70 +269,112 @@ class StreamingChatApp {
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            
-            let thinkingContainer = null;
+
             let buf = '';
-            let shouldStop = false;
+            let doneAll = false;
+            let thinkingContainer = null;
 
             console.log('🎬 開始處理 Thinking 串流...');
 
-            try {
-                while (!shouldStop) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+            // 建立一個 ctx，交給 handleGeminiPayload 使用
+            const ctx = {
+                showThinking: true,
+                ensureAnswerContainer: () => null,          // 思考階段不生成答案容器
+                onThinkingEnd: () => {                      // 可選：關掉指示器
+                    const ind = responseDiv.querySelector('.streaming-indicator');
+                    if (ind) ind.style.display = 'none';
+                },
+                onThinkingContent: async (rawText) => {
+                    console.log('💭 思考內容片段:', rawText.substring(0, 100) + '...');
+                    
+                    if (!thinkingContainer) {
+                        console.log('📦 創建思考容器...');
+                        thinkingContainer = this.createThinkingContainer(responseDiv);
+                        console.log('📦 思考容器已創建:', thinkingContainer ? '成功' : '失敗');
+                    }
+                    const contentDiv = thinkingContainer.querySelector('.thinking-content');
+                    if (!contentDiv) return;
 
-                    buf += decoder.decode(value, { stream: true });
+                    // 先直接顯示原文，再做翻譯（避免等待翻譯卡住視覺回饋）
+                    const safe = this.escapeHtml(rawText).replace(/\n/g, '<br>');
+                    contentDiv.innerHTML += safe;
+                    this.scrollToBottom();
 
-                    let sep;
-                    while ((sep = buf.search(/\r?\n\r?\n/)) !== -1) {
-                        const rawEvent = buf.slice(0, sep);
-                        buf = buf.slice(sep + (buf[sep] === '\r' ? 4 : 2));
+                    // 若你仍想把內容翻成中文，可以「補翻譯覆寫」：
+                    try {
+                        const t = await this.translateText(rawText);
+                        if (t && t !== rawText) {
+                            const safeT = this.escapeHtml(t).replace(/\n/g, '<br>');
+                            contentDiv.innerHTML = contentDiv.innerHTML.replace(safe, safeT);
+                        }
+                    } catch (e) {
+                        console.warn('翻譯思考內容失敗:', e);
+                    }
+                }
+            };
 
-                        const dataLines = rawEvent
-                            .split(/\r?\n/)
-                            .filter(l => l.startsWith('data:'))
-                            .map(l => l.replace(/^data:\s?/, ''));
+            // 讀取 SSE
+            while (!doneAll) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-                        if (dataLines.length === 0) continue;
+                buf += decoder.decode(value, { stream: true });
 
-                        const dataStr = dataLines.join('\n');
+                // 以 \n\n 分割 SSE 事件（相容 CRLF）
+                let idx;
+                while ((idx = buf.search(/\r?\n\r?\n/)) !== -1) {
+                    const rawEvent = buf.slice(0, idx);
+                    buf = buf.slice(idx + (buf.slice(idx, idx + 2) === '\r\n' ? 4 : 2));
+
+                    // 解析 event 的 data 行
+                    const dataLines = rawEvent
+                        .split(/\r?\n/)
+                        .filter(l => l.startsWith('data:'))
+                        .map(l => l.replace(/^data:\s?/, ''));
+
+                    if (dataLines.length === 0) continue;
+
+                    for (const dataStr of dataLines) {
                         console.log('📡 Thinking 原始回應:', dataStr);
                         
                         if (dataStr === '[DONE]') {
-                            shouldStop = true;
+                            doneAll = true;
                             console.log('✅ Thinking 階段完成');
                             break;
                         }
 
+                        // 嘗試多種 payload 格式
                         try {
                             const payload = JSON.parse(dataStr);
-                            
-                            if (payload.type === 'thinking_chunk') {
-                                if (!thinkingContainer) {
-                                    thinkingContainer = this.createThinkingContainer(responseDiv);
-                                }
-                                
-                                if (thinkingContainer && payload.content) {
-                                    // 翻譯並格式化思考內容
-                                    const translatedContent = await this.translateText(payload.content);
-                                    // 直接添加到容器中，因為 createThinkingContainer 已經設置了基本結構
-                                    const contentDiv = thinkingContainer.querySelector('.thinking-content');
-                                    if (contentDiv) {
-                                        // 將換行轉換為 HTML
-                                        const formattedContent = translatedContent.replace(/\n/g, '<br>');
-                                        contentDiv.innerHTML += formattedContent;
-                                    }
-                                    this.scrollToBottom();
-                                }
+
+                            // ① 你的自訂格式 { type: 'thinking_chunk', content: '...' }
+                            if (payload.type === 'thinking_chunk' && payload.content) {
+                                console.log('🧠 收到 thinking_chunk，內容長度:', payload.content.length);
+                                ctx.onThinkingContent(payload.content);
+                                continue;
                             }
-                        } catch (parseError) {
-                            console.warn('解析 thinking payload 失敗:', parseError, dataStr);
+
+                            // ② Gemini 標準/近標準：交給既有解析器
+                            const consumed = this.handleGeminiPayload && this.handleGeminiPayload(payload, ctx);
+                            if (consumed) continue;
+
+                            // ③ 其他可能格式的備援欄位
+                            if (payload.thinking) {
+                                console.log('🧠 收到 thinking 欄位');
+                                ctx.onThinkingContent(payload.thinking);
+                            } else if (payload.content && typeof payload.content === 'string') {
+                                console.log('🧠 收到一般 content 欄位');
+                                ctx.onThinkingContent(payload.content);
+                            }
+                        } catch (e) {
+                            console.warn('解析 thinking event 失敗：', e, dataStr);
                         }
                     }
                 }
-            } finally {
-                reader.releaseLock();
             }
+
+            reader.releaseLock();
+            console.log('✅ Thinking 階段處理完成');
             
         } catch (error) {
             console.error('Thinking 階段錯誤:', error);
@@ -387,8 +429,7 @@ class StreamingChatApp {
                     
                     // 檢查是否應該顯示引用來源（≥10個才顯示）
                     if (data.references.length >= 10) {
-                        const referencesContainer = this.createReferencesContainer(responseDiv);
-                        this.displayReferences(data.references, referencesContainer);
+                        this.createReferencesContainer(responseDiv, data.references);
                     } else {
                         console.log('📊 引用來源數量 < 10，不顯示引用區塊');
                     }
@@ -722,8 +763,8 @@ class StreamingChatApp {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    q: text,  // 修正參數名稱為 q
-                    targetLanguage: 'zh-TW'
+                    q: text,  // Worker 期待的參數名稱
+                    target: 'zh-TW'  // 修正：使用 target 而不是 targetLanguage
                 })
             });
 
