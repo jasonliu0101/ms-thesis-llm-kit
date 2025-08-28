@@ -409,11 +409,17 @@ class StreamingChatApp {
 
     // 新增：處理 Answer 階段的完整回應
     async processAnswerPhase(question, responseDiv) {
+        let answerContainer = null;
+        
         try {
             console.log('📞 呼叫 Answer API（使用搜尋）...');
             
             // 添加延遲，確保 thinking 階段先開始
             await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // 創建 Answer 容器並顯示處理中狀態
+            answerContainer = this.createAnswerContainer(responseDiv);
+            this.showAnswerProcessing(answerContainer);
             
             const response = await fetch(`${this.workerUrl}/`, {
                 method: 'POST',
@@ -436,29 +442,56 @@ class StreamingChatApp {
             }
 
             const data = await response.json();
-            console.log('💬 收到 Answer 回應');
+            console.log('💬 收到 Answer 回應，完整數據結構:', JSON.stringify(data, null, 2));
 
-            // 處理回應內容
-            if (data.answer) {
-                // 確保先等待一下再創建 Answer 容器，讓 thinking 有時間顯示
-                await new Promise(resolve => setTimeout(resolve, 500));
+            // 清除處理中狀態
+            this.clearAnswerProcessing(answerContainer);
+
+            // 解析回應內容 - 處理 Gemini API 的標準格式
+            let answerText = null;
+            let references = [];
+            
+            if (data.candidates && data.candidates[0]) {
+                const candidate = data.candidates[0];
                 
-                // 創建 Answer 容器
-                const answerContainer = this.createAnswerContainer(responseDiv);
+                // 提取答案文本（排除思考內容）
+                if (candidate.content && candidate.content.parts) {
+                    const nonThoughtParts = candidate.content.parts.filter(part => 
+                        part.text && part.thought !== true
+                    );
+                    if (nonThoughtParts.length > 0) {
+                        // 取最後一個非思考部分作為答案
+                        answerText = nonThoughtParts[nonThoughtParts.length - 1].text;
+                        console.log('💬 提取到答案文本，長度:', answerText.length);
+                    }
+                }
                 
+                // 提取引用來源
+                if (candidate.groundingMetadata && candidate.groundingMetadata.groundingChunks) {
+                    references = candidate.groundingMetadata.groundingChunks.map(chunk => ({
+                        title: chunk.web?.title || '未知來源',
+                        uri: chunk.web?.uri || '#',
+                        snippet: chunk.content || ''
+                    }));
+                    console.log('🔗 提取到引用來源:', references.length, '個');
+                }
+            }
+
+            // 顯示答案內容
+            if (answerText) {
                 // 翻譯並顯示答案
-                const translatedAnswer = await this.translateText(data.answer);
+                const translatedAnswer = await this.translateText(answerText);
                 const cleanedAnswer = this.cleanCompleteText(translatedAnswer);
                 const formattedAnswer = this.formatResponseChunk(cleanedAnswer);
-                answerContainer.innerHTML += formattedAnswer;
+                answerContainer.innerHTML = formattedAnswer;
                 
                 // 處理引用來源
-                if (data.references && data.references.length > 0) {
-                    console.log('📚 處理引用來源:', data.references.length, '個');
+                if (references && references.length > 0) {
+                    console.log('📚 處理引用來源:', references.length, '個');
                     
                     // 檢查是否應該顯示引用來源（≥10個才顯示）
-                    if (data.references.length >= 10) {
-                        this.createReferencesContainer(responseDiv, data.references);
+                    if (references.length >= 10) {
+                        this.createReferencesContainer(responseDiv, references);
                     } else {
                         console.log('📊 引用來源數量 < 10，不顯示引用區塊');
                     }
@@ -468,15 +501,24 @@ class StreamingChatApp {
                 const code = this.generateSessionCode({
                     originalQuestion: question,
                     thinking: true,
-                    references: data.references || []
+                    references: references || []
                 });
                 this.showSessionCode(responseDiv, code);
                 
                 this.scrollToBottom();
+            } else {
+                console.warn('⚠️ 沒有找到答案文本');
+                answerContainer.innerHTML = '<div class="error-message">未能取得完整回應內容</div>';
             }
             
         } catch (error) {
             console.error('Answer 階段錯誤:', error);
+            
+            if (answerContainer) {
+                this.clearAnswerProcessing(answerContainer);
+                answerContainer.innerHTML = `<div class="error-message">答案階段發生錯誤: ${error.message}</div>`;
+            }
+            
             throw error;
         }
     }
@@ -652,6 +694,30 @@ class StreamingChatApp {
         }).catch(err => {
             console.error('複製失敗:', err);
         });
+    }
+
+    // 新增：顯示答案處理中狀態
+    showAnswerProcessing(container) {
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="processing-indicator">
+                <div class="processing-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <span class="processing-text">正在處理答案...</span>
+            </div>
+        `;
+    }
+
+    // 新增：清除答案處理中狀態
+    clearAnswerProcessing(container) {
+        if (!container) return;
+        
+        const processingIndicator = container.querySelector('.processing-indicator');
+        if (processingIndicator) {
+            processingIndicator.remove();
+        }
     }
 
     showErrorInResponse(responseDiv, errorMessage) {
