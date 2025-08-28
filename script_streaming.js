@@ -353,36 +353,50 @@ class StreamingChatApp {
                                                 /\n\s*## 參考資料/,
                                                 /\n\s*## 引用來源/,
                                                 /\n\s*---\s*\n\s*參考資料[：:]/,
-                                                // 任何位置的參考資料標題（包括前面有文字的情況）
-                                                /參考資料[：:]/,
-                                                /引用來源[：:]/,
-                                                /參考資料來源[：:]/,
-                                                /參考資料與來源[：:]/,
-                                                /\*\*參考資料\*\*[：:]/,
-                                                /\*\*引用來源\*\*[：:]/
+                                                /\n\s*---\s*\n\s*\*\*參考資料\*\*[：:]/
                                             ];
                                             
-                                            // 檢測是否進入參考資料區段
+                                            let contentToProcess = payload.content;
+                                            let foundReferenceStart = false;
+                                            
+                                            // 檢測是否包含參考資料標題，並找到位置
                                             for (const pattern of referencePatterns) {
-                                                if (pattern.test(payload.content)) {
-                                                    console.log('🚫 檢測到參考資料標題，進入參考資料區段模式，跳過此及後續chunk:', payload.content.substring(0, 100) + '...');
+                                                const match = pattern.exec(payload.content);
+                                                if (match) {
+                                                    console.log('🚫 檢測到參考資料標題，進入參考資料區段模式');
+                                                    console.log('📍 參考資料開始位置:', match.index);
+                                                    console.log('✂️ 保留內容:', payload.content.substring(0, match.index));
+                                                    
+                                                    // 只保留參考資料標題之前的內容
+                                                    contentToProcess = payload.content.substring(0, match.index);
                                                     isInReferenceSection = true;
+                                                    foundReferenceStart = true;
                                                     break;
                                                 }
                                             }
                                             
-                                            // 如果檢測到參考資料標題，跳過這個chunk
-                                            if (isInReferenceSection) {
+                                            // 處理內容（如果有的話）
+                                            if (contentToProcess.trim()) {
+                                                const cleanedChunk = this.cleanCompleteText(contentToProcess);
+                                                if (cleanedChunk.trim()) {
+                                                    const formattedChunk = this.formatResponseChunk(cleanedChunk);
+                                                    answerContainer.innerHTML += formattedChunk;
+                                                    this.scrollToBottom();
+                                                }
+                                            }
+                                            
+                                            // 如果找到參考資料標題，後續就不處理了
+                                            if (foundReferenceStart) {
                                                 break;
                                             }
-                                        }
-                                        
-                                        // 對每個chunk進行完整的清理處理
-                                        const cleanedChunk = this.cleanCompleteText(payload.content);
-                                        if (cleanedChunk.trim()) {
-                                            const formattedChunk = this.formatResponseChunk(cleanedChunk);
-                                            answerContainer.innerHTML += formattedChunk;
-                                            this.scrollToBottom();
+                                        } else {
+                                            // 引用來源數量 >= 10，正常處理所有內容
+                                            const cleanedChunk = this.cleanCompleteText(payload.content);
+                                            if (cleanedChunk.trim()) {
+                                                const formattedChunk = this.formatResponseChunk(cleanedChunk);
+                                                answerContainer.innerHTML += formattedChunk;
+                                                this.scrollToBottom();
+                                            }
                                         }
                                     }
                                     break;
