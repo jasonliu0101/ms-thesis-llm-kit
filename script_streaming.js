@@ -448,7 +448,7 @@ class StreamingChatApp {
         
         messageContent.appendChild(thinkingDiv);
         this.scrollToBottom();
-        return thinkingDiv.querySelector('.thinking-content');
+        return thinkingDiv;  // 返回整個 thinking section，而不是內容區域
     }
 
     createAnswerContainer(responseDiv) {
