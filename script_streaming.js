@@ -230,23 +230,20 @@ class StreamingChatApp {
         const responseDiv = this.createResponseContainer();
         
         try {
-            // === Case C 混合模式：和 Case A 一樣的兩階段處理 ===
-            // 第一階段：Thinking streaming（不使用搜尋）
-            // 第二階段：Answer complete response（使用搜尋）
+            // === Case C 混合模式：併發執行兩階段處理 ===
+            console.log('🧠 開始 Case C 混合模式（併發執行）...');
             
-            console.log('🧠 開始 Case C 混合模式...');
-            
-            // === 第一階段：Thinking 階段（不使用搜尋） ===
-            console.log('📝 第一階段：Thinking 流程（純邏輯推理）');
-            await this.processThinkingPhase(question, responseDiv);
-            
-            // === 第二階段：Answer 階段（使用搜尋） ===  
-            console.log('💡 第二階段：Answer 流程（結合網路搜尋）');
-            await this.processAnswerPhase(question, responseDiv);
+            // 併發執行兩個階段
+            await Promise.all([
+                // 第一階段：Thinking streaming（不使用搜尋）
+                this.processThinkingPhase(question, responseDiv),
+                // 第二階段：Answer complete response（使用搜尋）
+                this.processAnswerPhase(question, responseDiv)
+            ]);
             
         } catch (error) {
             console.error('混合模式處理錯誤:', error);
-            this.displayError(error.message, responseDiv);
+            this.showErrorInResponse(responseDiv, error.message);
         }
     }
 
@@ -316,10 +313,15 @@ class StreamingChatApp {
                                 }
                                 
                                 if (thinkingContainer && payload.content) {
-                                    // 翻譯思考內容
+                                    // 翻譯並格式化思考內容
                                     const translatedContent = await this.translateText(payload.content);
-                                    const formattedContent = this.formatThinkingChunk(translatedContent);
-                                    thinkingContainer.innerHTML += formattedContent;
+                                    // 直接添加到容器中，因為 createThinkingContainer 已經設置了基本結構
+                                    const contentDiv = thinkingContainer.querySelector('.thinking-content');
+                                    if (contentDiv) {
+                                        // 將換行轉換為 HTML
+                                        const formattedContent = translatedContent.replace(/\n/g, '<br>');
+                                        contentDiv.innerHTML += formattedContent;
+                                    }
                                     this.scrollToBottom();
                                 }
                             }
@@ -343,6 +345,9 @@ class StreamingChatApp {
         try {
             console.log('📞 呼叫 Answer API（使用搜尋）...');
             
+            // 添加延遲，確保 thinking 階段先開始
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
             const response = await fetch(`${this.workerUrl}/`, {
                 method: 'POST',
                 headers: {
@@ -364,6 +369,9 @@ class StreamingChatApp {
 
             // 處理回應內容
             if (data.answer) {
+                // 確保先等待一下再創建 Answer 容器，讓 thinking 有時間顯示
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
                 // 創建 Answer 容器
                 const answerContainer = this.createAnswerContainer(responseDiv);
                 
@@ -385,6 +393,14 @@ class StreamingChatApp {
                         console.log('📊 引用來源數量 < 10，不顯示引用區塊');
                     }
                 }
+                
+                // 生成並顯示 session code
+                const code = this.generateSessionCode({
+                    originalQuestion: question,
+                    thinking: true,
+                    references: data.references || []
+                });
+                this.showSessionCode(responseDiv, code);
                 
                 this.scrollToBottom();
             }
