@@ -912,32 +912,31 @@ class StreamingChatApp {
 
     // 新增：確保識別碼始終在最下方
     ensureSessionCodeAtBottom(messageContent, sessionDiv) {
-        // 獲取所有現有的子元素
+        // 移除舊的識別碼
+        const existingSessionDiv = messageContent.querySelector('.session-id-display');
+        if (existingSessionDiv) {
+            existingSessionDiv.remove();
+        }
+
+        // 排序其他元素
         const children = Array.from(messageContent.children);
-        
-        // 定義元素的優先順序（數字越大越靠下）
         const getElementPriority = (element) => {
             if (element.classList.contains('message-header')) return 1;
             if (element.classList.contains('thinking-section')) return 2;
             if (element.classList.contains('response-section')) return 3;
             if (element.classList.contains('references-section')) return 4;
-            if (element.classList.contains('session-id-display')) return 5;
-            return 0; // 未知元素
+            return 0;
         };
-        
-        // 將新的識別碼元素添加到數組中
-        const allElements = [...children, sessionDiv];
-        
-        // 按優先順序排序
-        allElements.sort((a, b) => getElementPriority(a) - getElementPriority(b));
-        
-        // 清空容器並按正確順序重新添加所有元素
+        children.sort((a, b) => getElementPriority(a) - getElementPriority(b));
+
+        // 重新 append 所有元素（不含識別碼）
         messageContent.innerHTML = '';
-        allElements.forEach(element => {
-            messageContent.appendChild(element);
-        });
-        
-        console.log('✅ 識別碼已確保在最下方');
+        children.forEach(element => messageContent.appendChild(element));
+
+        // 最後 append 識別碼
+        messageContent.appendChild(sessionDiv);
+
+        console.log('✅ 識別碼已固定在最下方');
     }
 
     // 新增：顯示答案處理中狀態
