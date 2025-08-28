@@ -295,21 +295,42 @@ class StreamingChatApp {
                     const contentDiv = thinkingContainer.querySelector('.thinking-content');
                     if (!contentDiv) return;
 
-                    // 先直接顯示原文，再做翻譯（避免等待翻譯卡住視覺回饋）
-                    const safe = this.escapeHtml(rawText).replace(/\n/g, '<br>');
-                    contentDiv.innerHTML += safe;
-                    this.scrollToBottom();
-
-                    // 若你仍想把內容翻成中文，可以「補翻譯覆寫」：
+                    // 翻譯思考內容
                     try {
-                        const t = await this.translateText(rawText);
-                        if (t && t !== rawText) {
-                            const safeT = this.escapeHtml(t).replace(/\n/g, '<br>');
-                            contentDiv.innerHTML = contentDiv.innerHTML.replace(safe, safeT);
-                        }
+                        const translatedText = await this.translateText(rawText);
+                        // 處理 Markdown 格式並轉換為 HTML
+                        const formattedContent = this.formatMarkdown(translatedText);
+                        contentDiv.innerHTML += formattedContent;
+                        this.scrollToBottom();
                     } catch (e) {
                         console.warn('翻譯思考內容失敗:', e);
+                        // 如果翻譯失敗，直接顯示原文
+                        const formattedContent = this.formatMarkdown(rawText);
+                        contentDiv.innerHTML += formattedContent;
+                        this.scrollToBottom();
                     }
+                },
+                onThinkingEnd: () => {
+                    console.log('🔚 思考階段結束，隱藏串流指示器');
+                    const ind = responseDiv.querySelector('.streaming-indicator');
+                    if (ind) ind.style.display = 'none';
+                    
+                    // 添加思考完成標記
+                    if (thinkingContainer) {
+                        const contentDiv = thinkingContainer.querySelector('.thinking-content');
+                        if (contentDiv) {
+                            contentDiv.innerHTML += '<div class="thinking-complete">💭 思考完成</div>';
+                        }
+                    }
+                },
+                // 忽略答案階段 - 答案內容將被隱藏
+                onAnswerStart: () => {
+                    console.log('📝 答案階段開始 - 但將隱藏答案內容');
+                    return null; // 不創建答案容器
+                },
+                onAnswerContent: () => {
+                    // 完全忽略答案內容
+                    console.log('🙈 隱藏答案內容');
                 }
             };
 
@@ -347,10 +368,22 @@ class StreamingChatApp {
                         try {
                             const payload = JSON.parse(dataStr);
 
-                            // ① 你的自訂格式 { type: 'thinking_chunk', content: '...' }
+                            // ① 自訂格式處理
                             if (payload.type === 'thinking_chunk' && payload.content) {
                                 console.log('🧠 收到 thinking_chunk，內容長度:', payload.content.length);
                                 ctx.onThinkingContent(payload.content);
+                                continue;
+                            }
+                            
+                            if (payload.type === 'thinking_end') {
+                                console.log('🔚 收到 thinking_end');
+                                ctx.onThinkingEnd();
+                                continue;
+                            }
+                            
+                            // 隱藏答案階段的所有內容
+                            if (payload.type === 'answer_start' || payload.type === 'answer_chunk') {
+                                console.log('🙈 隱藏答案內容:', payload.type);
                                 continue;
                             }
 
@@ -1215,6 +1248,39 @@ class StreamingChatApp {
         if (this.chatContainer) {
             this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
         }
+    }
+
+    // Markdown 格式處理
+    formatMarkdown(text) {
+        if (!text) return '';
+        
+        let html = this.escapeHtml(text);
+        
+        // 處理標題
+        html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+        html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+        
+        // 處理粗體
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        
+        // 處理斜體
+        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        
+        // 處理換行
+        html = html.replace(/\n\n/g, '</p><p>');
+        html = html.replace(/\n/g, '<br>');
+        
+        // 包裹段落
+        if (html.includes('<br>') || html.includes('<h') || html.includes('<strong>')) {
+            html = '<p>' + html + '</p>';
+            // 清理多餘的段落標籤
+            html = html.replace(/<p><\/p>/g, '');
+            html = html.replace(/<p>(<h[1-6]>)/g, '$1');
+            html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
+        }
+        
+        return html;
     }
 
     escapeHtml(text) {
