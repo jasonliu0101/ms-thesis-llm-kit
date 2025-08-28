@@ -332,11 +332,41 @@ class StreamingChatApp {
                                 case 'answer_chunk':
                                     if (!answerContainer) answerContainer = this.createAnswerContainer(responseDiv);
                                     if (answerContainer) {
-                                        // 對每個chunk進行完整的清理處理
-                                        const cleanedChunk = this.cleanCompleteText(payload.content);
-                                        const formattedChunk = this.formatResponseChunk(cleanedChunk);
-                                        answerContainer.innerHTML += formattedChunk;
-                                        this.scrollToBottom();
+                                        // 如果引用來源數量 < 10，檢查是否包含參考資料相關內容
+                                        let shouldSkip = false;
+                                        if (collectedReferences.length < 10) {
+                                            // 檢查是否包含參考資料標題的模式
+                                            const referencePatterns = [
+                                                /\n\s*參考資料[：:]/,
+                                                /\n\s*引用來源[：:]/,
+                                                /\n\s*參考資料來源[：:]/,
+                                                /\n\s*參考資料與來源[：:]/,
+                                                /\n\s*\*\*參考資料\*\*[：:]/,
+                                                /\n\s*\*\*引用來源\*\*[：:]/,
+                                                /\n\s*## 參考資料/,
+                                                /\n\s*## 引用來源/,
+                                                /\n\s*---\s*\n\s*參考資料[：:]/,
+                                                /參考資料[：:]\s*\n/
+                                            ];
+                                            
+                                            for (const pattern of referencePatterns) {
+                                                if (pattern.test(payload.content)) {
+                                                    console.log('🚫 檢測到參考資料標題，跳過此chunk:', payload.content.substring(0, 50) + '...');
+                                                    shouldSkip = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (!shouldSkip) {
+                                            // 對每個chunk進行完整的清理處理
+                                            const cleanedChunk = this.cleanCompleteText(payload.content);
+                                            if (cleanedChunk.trim()) {
+                                                const formattedChunk = this.formatResponseChunk(cleanedChunk);
+                                                answerContainer.innerHTML += formattedChunk;
+                                                this.scrollToBottom();
+                                            }
+                                        }
                                     }
                                     break;
                                 case 'grounding':
@@ -907,18 +937,22 @@ class StreamingChatApp {
         cleaned = cleaned.replace(/引用資料[：:][\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/引用來源[：:][\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/參考來源[：:][\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/參考資料來源[：:][\s\S]*$/m, '').trim();
         
         // 額外清理各種可能的格式變體，確保徹底移除
         cleaned = cleaned.replace(/---\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/---\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/---\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/---\s*\*\*參考資料來源[：:]\*\*[\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/---\s*\n\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/---\s*\n\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/---\s*\n\s*\*\*參考資料來源[：:]\*\*[\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/---\s*\n\s*\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
+        cleaned = cleaned.replace(/\*\*參考資料來源[：:]\*\*[\s\S]*$/m, '').trim();
         cleaned = cleaned.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
         
         // 第三步：清理可能產生的多餘空白和換行
