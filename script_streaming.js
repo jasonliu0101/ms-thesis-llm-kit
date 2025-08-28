@@ -831,7 +831,14 @@ class StreamingChatApp {
             </div>
         `;
         
-        messageContent.appendChild(referencesDiv);
+        // 將引用容器插入到識別碼之前（如果識別碼存在）
+        const sessionDiv = messageContent.querySelector('.session-id-display');
+        if (sessionDiv) {
+            messageContent.insertBefore(referencesDiv, sessionDiv);
+        } else {
+            messageContent.appendChild(referencesDiv);
+        }
+        
         this.scrollToBottom();
         return referencesDiv;
     }
@@ -873,6 +880,12 @@ class StreamingChatApp {
                     </p>
                 </div>
             `;
+            
+            // 確保識別碼始終在最下方：先移除已存在的識別碼，再添加到最後
+            const existingSessionDiv = messageContent.querySelector('.session-id-display');
+            if (existingSessionDiv) {
+                existingSessionDiv.remove();
+            }
             
             messageContent.appendChild(sessionDiv);
             this.hasShownSessionId = true;
