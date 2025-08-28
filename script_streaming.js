@@ -314,14 +314,6 @@ class StreamingChatApp {
                     console.log('🔚 思考階段結束，隱藏串流指示器');
                     const ind = responseDiv.querySelector('.streaming-indicator');
                     if (ind) ind.style.display = 'none';
-                    
-                    // 添加思考完成標記
-                    if (thinkingContainer) {
-                        const contentDiv = thinkingContainer.querySelector('.thinking-content');
-                        if (contentDiv) {
-                            contentDiv.innerHTML += '<div class="thinking-complete">💭 思考完成</div>';
-                        }
-                    }
                 },
                 // 忽略答案階段 - 答案內容將被隱藏
                 onAnswerStart: () => {

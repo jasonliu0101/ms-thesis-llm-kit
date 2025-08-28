@@ -5,18 +5,6 @@
     visibility: visible !important;
 }
 
-/* 思考完成標記 */
-.thinking-complete {
-    margin-top: 15px;
-    padding: 8px 12px;
-    background: rgba(76, 175, 80, 0.1);
-    border-left: 3px solid #4caf50;
-    border-radius: 4px;
-    font-size: 0.9em;
-    color: #4caf50;
-    text-align: center;
-}
-
 * {
     margin: 0;
     padding: 0;
