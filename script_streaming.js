@@ -230,19 +230,21 @@ class StreamingChatApp {
         const responseDiv = this.createResponseContainer();
         
         try {
-            // === Case C 混合模式：併發執行兩階段處理 ===
-            console.log('🧠 開始 Case C 混合模式（併發執行）...');
+            // === Case C 順序模式：先思考，再處理答案 ===
+            console.log('🧠 開始 Case C 順序模式（先思考後答案）...');
             
-            // 併發執行兩個階段
-            await Promise.all([
-                // 第一階段：Thinking streaming（不使用搜尋）
-                this.processThinkingPhase(question, responseDiv),
-                // 第二階段：Answer complete response（使用搜尋）
-                this.processAnswerPhase(question, responseDiv)
-            ]);
+            // 第一階段：先完成 Thinking streaming（不使用搜尋）
+            console.log('📝 階段一：開始思考階段...');
+            await this.processThinkingPhase(question, responseDiv);
+            console.log('✅ 階段一：思考階段完成');
+            
+            // 第二階段：思考完成後再處理 Answer complete response（使用搜尋）
+            console.log('💬 階段二：開始答案階段...');
+            await this.processAnswerPhase(question, responseDiv);
+            console.log('✅ 階段二：答案階段完成');
             
         } catch (error) {
-            console.error('混合模式處理錯誤:', error);
+            console.error('順序模式處理錯誤:', error);
             this.showErrorInResponse(responseDiv, error.message);
         }
     }
@@ -414,10 +416,7 @@ class StreamingChatApp {
         try {
             console.log('📞 呼叫 Answer API（使用搜尋）...');
             
-            // 添加延遲，確保 thinking 階段先開始
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // 創建 Answer 容器並顯示處理中狀態
+            // 創建 Answer 容器並顯示處理中狀態（思考完成後立即顯示）
             answerContainer = this.createAnswerContainer(responseDiv);
             this.showAnswerProcessing(answerContainer);
             
@@ -589,7 +588,19 @@ class StreamingChatApp {
             </div>
         `;
         
-        messageContent.appendChild(answerDiv);
+        // 找到思考容器，將答案容器插入其後
+        const thinkingSection = messageContent.querySelector('.thinking-section');
+        if (thinkingSection && thinkingSection.nextSibling) {
+            // 如果思考容器存在且有下一個兄弟節點，插入在下一個節點之前
+            messageContent.insertBefore(answerDiv, thinkingSection.nextSibling);
+        } else if (thinkingSection) {
+            // 如果思考容器存在但沒有下一個兄弟節點，直接追加
+            messageContent.appendChild(answerDiv);
+        } else {
+            // 如果沒有思考容器，直接追加
+            messageContent.appendChild(answerDiv);
+        }
+        
         this.scrollToBottom();
         return answerDiv.querySelector('.response-content');
     }

@@ -1711,21 +1711,31 @@ sup {
     overflow: hidden;
 }
 
+/* 確保顯示順序：思考區 -> 回答區 -> 引用區 */
 .thinking-section {
+    order: 1;
     background: linear-gradient(135deg, #f0f4ff 0%, #f8f9ff 100%);
     border: 1px solid rgba(102, 126, 234, 0.15);
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.05);
 }
 
+.response-section {
+    order: 2;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
 .references-section {
+    order: 3;
     background: linear-gradient(135deg, #f0fff4 0%, #f8fff9 100%);
     border: 1px solid rgba(34, 197, 94, 0.15);
     box-shadow: 0 2px 8px rgba(34, 197, 94, 0.05);
 }
 
-.response-section {
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+/* 確保 message-content 為 flex 容器 */
+.message-content {
+    display: flex;
+    flex-direction: column;
 }
 
 .thinking-header, .references-header, .response-header {
