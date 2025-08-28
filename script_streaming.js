@@ -831,12 +831,13 @@ class StreamingChatApp {
             </div>
         `;
         
-        // 將引用容器插入到識別碼之前（如果識別碼存在）
+        // 添加引用容器並使用排序機制確保正確順序
+        messageContent.appendChild(referencesDiv);
+        
+        // 如果識別碼已存在，重新排序所有元素
         const sessionDiv = messageContent.querySelector('.session-id-display');
         if (sessionDiv) {
-            messageContent.insertBefore(referencesDiv, sessionDiv);
-        } else {
-            messageContent.appendChild(referencesDiv);
+            this.ensureSessionCodeAtBottom(messageContent, sessionDiv.cloneNode(true));
         }
         
         this.scrollToBottom();
@@ -881,13 +882,14 @@ class StreamingChatApp {
                 </div>
             `;
             
-            // 確保識別碼始終在最下方：先移除已存在的識別碼，再添加到最後
+            // 確保識別碼始終在最下方：使用强制排序
             const existingSessionDiv = messageContent.querySelector('.session-id-display');
             if (existingSessionDiv) {
                 existingSessionDiv.remove();
             }
             
-            messageContent.appendChild(sessionDiv);
+            // 將識別碼添加到最後，並確保它在所有現有元素之後
+            this.ensureSessionCodeAtBottom(messageContent, sessionDiv);
             this.hasShownSessionId = true;
             this.scrollToBottom();
         }
@@ -906,6 +908,36 @@ class StreamingChatApp {
         }).catch(err => {
             console.error('複製失敗:', err);
         });
+    }
+
+    // 新增：確保識別碼始終在最下方
+    ensureSessionCodeAtBottom(messageContent, sessionDiv) {
+        // 獲取所有現有的子元素
+        const children = Array.from(messageContent.children);
+        
+        // 定義元素的優先順序（數字越大越靠下）
+        const getElementPriority = (element) => {
+            if (element.classList.contains('message-header')) return 1;
+            if (element.classList.contains('thinking-section')) return 2;
+            if (element.classList.contains('response-section')) return 3;
+            if (element.classList.contains('references-section')) return 4;
+            if (element.classList.contains('session-id-display')) return 5;
+            return 0; // 未知元素
+        };
+        
+        // 將新的識別碼元素添加到數組中
+        const allElements = [...children, sessionDiv];
+        
+        // 按優先順序排序
+        allElements.sort((a, b) => getElementPriority(a) - getElementPriority(b));
+        
+        // 清空容器並按正確順序重新添加所有元素
+        messageContent.innerHTML = '';
+        allElements.forEach(element => {
+            messageContent.appendChild(element);
+        });
+        
+        console.log('✅ 識別碼已確保在最下方');
     }
 
     // 新增：顯示答案處理中狀態
