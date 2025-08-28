@@ -1329,6 +1329,32 @@ sup {
     margin-right: 6px;
 }
 
+/* AI Disclaimer */
+.ai-disclaimer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: rgba(245, 166, 35, 0.1);
+    border: 1px solid rgba(245, 166, 35, 0.3);
+    border-radius: 12px;
+    color: #d97706;
+    font-size: 14px;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+}
+
+.ai-disclaimer i {
+    font-size: 16px;
+    color: #f59e23;
+}
+
+.ai-disclaimer span {
+    color: #92400e;
+}
+
 /* Bottom Right Settings */
 .bottom-right-settings {
     position: fixed;
