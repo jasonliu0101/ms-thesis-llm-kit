@@ -230,24 +230,59 @@ class StreamingChatApp {
         const responseDiv = this.createResponseContainer();
         
         try {
-            // === Case C 混合模式：併發執行請求，但順序顯示結果 ===
-            console.log('🧠 開始 Case C 混合模式（併發請求，順序顯示）...');
+            // === Case C 混合模式：併發執行請求，智能顯示結果 ===
+            console.log('🧠 開始 Case C 混合模式（併發請求，智能顯示）...');
             
-            // 併發執行兩個階段的請求，但控制顯示時機
-            const [thinkingResult, answerResult] = await Promise.allSettled([
-                // 第一階段：Thinking streaming（不使用搜尋）
-                this.processThinkingPhase(question, responseDiv),
-                // 第二階段：Answer complete response（使用搜尋）- 靜默執行
-                this.processAnswerPhaseBackground(question, responseDiv)
-            ]);
+            // 創建答案狀態追蹤
+            let answerData = null;
+            let thinkingEnded = false;
+            let answerDisplayed = false;
             
-            // 思考階段完成後，顯示答案處理並展示結果
-            console.log('✅ 思考階段完成，開始顯示答案...');
-            if (answerResult.status === 'fulfilled') {
-                await this.displayAnswerResult(responseDiv, answerResult.value, question);
-            } else {
-                console.error('❌ 答案階段失敗:', answerResult.reason);
-                throw answerResult.reason;
+            // 併發執行兩個階段的請求
+            const answerPromise = this.processAnswerPhaseBackground(question, responseDiv)
+                .then(data => {
+                    console.log('📋 答案數據已準備就緒');
+                    answerData = data;
+                    // 如果思考已結束且答案還未顯示，立即顯示答案
+                    if (thinkingEnded && !answerDisplayed) {
+                        console.log('⚡ 思考已結束，立即顯示答案');
+                        answerDisplayed = true;
+                        return this.displayAnswerResult(responseDiv, answerData, question);
+                    }
+                    return data;
+                })
+                .catch(error => {
+                    console.error('❌ 答案階段失敗:', error);
+                    throw error;
+                });
+            
+            const thinkingPromise = this.processThinkingPhase(question, responseDiv, () => {
+                console.log('🎯 思考 chunk 結束回調');
+                thinkingEnded = true;
+                
+                // 思考結束時立即創建答案容器並顯示處理中狀態
+                const answerContainer = this.createAnswerContainer(responseDiv);
+                this.showAnswerProcessing(answerContainer);
+                
+                // 如果答案數據已準備好且還未顯示，立即顯示答案
+                if (answerData && !answerDisplayed) {
+                    console.log('⚡ 答案已準備，立即顯示');
+                    answerDisplayed = true;
+                    this.displayAnswerResult(responseDiv, answerData, question);
+                }
+            });
+            
+            // 等待思考階段完成（但答案可能已經在思考過程中顯示了）
+            await thinkingPromise;
+            
+            // 如果答案還沒顯示，等待答案完成後顯示
+            if (!answerDisplayed) {
+                console.log('⏳ 等待答案完成...');
+                answerData = await answerPromise;
+                if (!answerDisplayed) {
+                    answerDisplayed = true;
+                    await this.displayAnswerResult(responseDiv, answerData, question);
+                }
             }
             
         } catch (error) {
@@ -257,7 +292,7 @@ class StreamingChatApp {
     }
 
     // 新增：處理 Thinking 階段的串流
-    async processThinkingPhase(question, responseDiv) {
+    async processThinkingPhase(question, responseDiv, onThinkingChunkEnd = null) {
         try {
             const response = await fetch(`${this.workerUrl}/stream-gemini`, {
                 method: 'POST',
@@ -324,10 +359,11 @@ class StreamingChatApp {
                     const ind = responseDiv.querySelector('.streaming-indicator');
                     if (ind) ind.style.display = 'none';
                     
-                    // 思考階段結束後，立即創建答案容器並顯示處理中狀態
-                    console.log('⚡ 思考結束，立即顯示答案處理中...');
-                    const answerContainer = this.createAnswerContainer(responseDiv);
-                    this.showAnswerProcessing(answerContainer);
+                    // 調用外部回調（如果提供）
+                    if (onThinkingChunkEnd) {
+                        console.log('🎯 調用思考 chunk 結束回調');
+                        onThinkingChunkEnd();
+                    }
                 },
                 // 忽略答案階段 - 答案內容將被隱藏
                 onAnswerStart: () => {
