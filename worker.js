@@ -228,7 +228,7 @@ async function handleTranslateRequest(request, env) {
 // 處理 Gemini API 請求
 async function handleGeminiRequest(request, env) {
   try {
-    const { question, enableSearch, showThinking, options } = await request.json();
+    const { question, enableSearch, showThinking, options, sessionId } = await request.json();
     
     if (!question) {
       return new Response(JSON.stringify({ error: 'Question is required' }), {
@@ -258,34 +258,29 @@ async function handleGeminiRequest(request, env) {
 
     // 根據前端參數決定調用策略
     if (enableSearch !== false) {
-      // 雙重調用：有 grounding 和無 grounding
-      try {
-        const response = await handleDualGeminiAPI(question, env, { enableSearch, showThinking });
-        return createResponse(response);
-      } catch (dualError) {
-        console.error('❌ 雙重 API 調用失敗:', dualError.message);
-        
-        // 檢查是否為地理位置錯誤
-        if (dualError.message.includes('User location is not supported')) {
-          return new Response(JSON.stringify({
-            error: 'Gemini API 地理位置限制',
-            details: 'Gemini API 在您的地理位置不可用',
-            fallback_message: '抱歉，Gemini API 服務在您的地理位置不可用。這是 Google 的服務限制。'
-          }), {
-            status: 503,
-            headers: getCORSHeaders()
-          });
-        }
-        
-        // 嘗試簡化的單一調用
+      // 檢查是否來自 Case C 的答案階段
+      // Case C 會在 options 中設置 caseType: 'streaming' 或類似標識符
+      const isCaseC = options?.caseType === 'streaming' || options?.isStreamingAnswer === true;
+      
+      if (isCaseC) {
+        // Case C：單一調用，只有 grounding (搜索)
         try {
-          const fallbackResponse = await callSimplifiedGeminiAPI(question, env);
-          return createResponse(fallbackResponse);
-        } catch (fallbackError) {
-          console.error('❌ 簡化調用也失敗:', fallbackError.message);
+          const response = await callGeminiAPI(question, env, true);
+          return createResponse(response);
+        } catch (searchError) {
+          console.error('❌ Case C 搜索調用失敗:', searchError.message);
+          throw searchError;
+        }
+      } else {
+        // Case A：雙重調用，有 grounding 和無 grounding
+        try {
+          const response = await handleDualGeminiAPI(question, env, { enableSearch, showThinking });
+          return createResponse(response);
+        } catch (dualError) {
+          console.error('❌ 雙重 API 調用失敗:', dualError.message);
           
-          // 如果也是地理位置問題，返回友好錯誤
-          if (fallbackError.message.includes('User location is not supported')) {
+          // 檢查是否為地理位置錯誤
+          if (dualError.message.includes('User location is not supported')) {
             return new Response(JSON.stringify({
               error: 'Gemini API 地理位置限制',
               details: 'Gemini API 在您的地理位置不可用',
@@ -296,7 +291,27 @@ async function handleGeminiRequest(request, env) {
             });
           }
           
-          throw new Error(`所有 Gemini API 調用都失敗 - 主要: ${dualError.message}, 備用: ${fallbackError.message}`);
+          // 嘗試簡化的單一調用
+          try {
+            const fallbackResponse = await callSimplifiedGeminiAPI(question, env);
+            return createResponse(fallbackResponse);
+          } catch (fallbackError) {
+            console.error('❌ 簡化調用也失敗:', fallbackError.message);
+            
+            // 如果也是地理位置問題，返回友好錯誤
+            if (fallbackError.message.includes('User location is not supported')) {
+              return new Response(JSON.stringify({
+                error: 'Gemini API 地理位置限制',
+                details: 'Gemini API 在您的地理位置不可用',
+                fallback_message: '抱歉，Gemini API 服務在您的地理位置不可用。這是 Google 的服務限制。'
+              }), {
+                status: 503,
+                headers: getCORSHeaders()
+              });
+            }
+            
+            throw new Error(`所有 Gemini API 調用都失敗 - 主要: ${dualError.message}, 備用: ${fallbackError.message}`);
+          }
         }
       }
     } else {

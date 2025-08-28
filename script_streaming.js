@@ -423,7 +423,11 @@ class StreamingChatApp {
                 body: JSON.stringify({
                     question: question,
                     enableSearch: true,  // Answer 階段：使用搜尋
-                    sessionId: this.sessionId
+                    sessionId: this.sessionId,
+                    options: {
+                        caseType: 'streaming',
+                        isStreamingAnswer: true
+                    }
                 })
             });
 
