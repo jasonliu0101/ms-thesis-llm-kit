@@ -329,12 +329,10 @@ class StreamingChatApp {
                     if (ind) ind.style.display = 'none';
                 },
                 onThinkingContent: async (rawText) => {
-                    console.log('💭 思考內容片段:', rawText.substring(0, 100) + '...');
+                    // 移除詳細的思考內容日誌
                     
                     if (!thinkingContainer) {
-                        console.log('📦 創建思考容器...');
                         thinkingContainer = this.createThinkingContainer(responseDiv);
-                        console.log('📦 思考容器已創建:', thinkingContainer ? '成功' : '失敗');
                     }
                     const contentDiv = thinkingContainer.querySelector('.thinking-content');
                     if (!contentDiv) return;
@@ -398,7 +396,7 @@ class StreamingChatApp {
                     if (dataLines.length === 0) continue;
 
                     for (const dataStr of dataLines) {
-                        console.log('📡 Thinking 原始回應:', dataStr);
+                        // 移除 thinking 原始回應日誌
                         
                         if (dataStr === '[DONE]') {
                             doneAll = true;
@@ -412,7 +410,7 @@ class StreamingChatApp {
 
                             // ① 自訂格式處理
                             if (payload.type === 'thinking_chunk' && payload.content) {
-                                console.log('🧠 收到 thinking_chunk，內容長度:', payload.content.length);
+                                // 移除 thinking_chunk 詳細日誌
                                 ctx.onThinkingContent(payload.content);
                                 continue;
                             }
@@ -435,10 +433,10 @@ class StreamingChatApp {
 
                             // ③ 其他可能格式的備援欄位
                             if (payload.thinking) {
-                                console.log('🧠 收到 thinking 欄位');
+                                // 移除 thinking 欄位詳細日誌
                                 ctx.onThinkingContent(payload.thinking);
                             } else if (payload.content && typeof payload.content === 'string') {
-                                console.log('🧠 收到一般 content 欄位');
+                                // 移除 content 欄位詳細日誌
                                 ctx.onThinkingContent(payload.content);
                             }
                         } catch (e) {
@@ -489,7 +487,7 @@ class StreamingChatApp {
             }
 
             const data = await response.json();
-            console.log('💬 收到 Answer 回應，完整數據結構:', JSON.stringify(data, null, 2));
+            // 移除詳細數據結構日誌
 
             // 清除處理中狀態
             this.clearAnswerProcessing(answerContainer);
@@ -520,7 +518,7 @@ class StreamingChatApp {
                         uri: chunk.web?.uri || '#',
                         snippet: chunk.content || ''
                     }));
-                    console.log('🔗 提取到引用來源:', references.length, '個');
+                    console.log('🔗 [Case C] 提取到引用來源:', references.length, '個');
                 }
             }
 
@@ -534,13 +532,14 @@ class StreamingChatApp {
                 
                 // 處理引用來源
                 if (references && references.length > 0) {
-                    console.log('📚 處理引用來源:', references.length, '個');
+                    console.log('📚 [Case C] 處理引用來源:', references.length, '個');
                     
                     // 檢查是否應該顯示引用來源（≥10個才顯示）
                     if (references.length >= 10) {
                         this.createReferencesContainer(responseDiv, references);
+                        console.log('✅ [Case C] 顯示引用區塊');
                     } else {
-                        console.log('📊 引用來源數量 < 10，不顯示引用區塊');
+                        console.log('❌ [Case C] 引用來源數量 < 10，不顯示引用區塊');
                     }
                 }
                 
@@ -596,7 +595,7 @@ class StreamingChatApp {
             }
 
             const data = await response.json();
-            console.log('💬 背景收到 Answer 回應，完整數據結構:', JSON.stringify(data, null, 2));
+            // 移除詳細數據結構日誌
 
             // 解析回應內容但不顯示
             let answerText = null;
@@ -623,7 +622,7 @@ class StreamingChatApp {
                         uri: chunk.web?.uri || '#',
                         snippet: chunk.content || ''
                     }));
-                    console.log('🔗 背景提取到引用來源:', references.length, '個');
+                    console.log('🔗 [Case C] 背景提取到引用來源:', references.length, '個');
                 }
             }
 
@@ -674,13 +673,14 @@ class StreamingChatApp {
                 
                 // 處理引用來源
                 if (references && references.length > 0) {
-                    console.log('📚 顯示引用來源:', references.length, '個');
+                    console.log('📚 [Case C] 顯示引用來源:', references.length, '個');
                     
                     // 檢查是否應該顯示引用來源（≥10個才顯示）
                     if (references.length >= 10) {
                         this.createReferencesContainer(responseDiv, references);
+                        console.log('✅ [Case C] 顯示引用區塊');
                     } else {
-                        console.log('📊 引用來源數量 < 10，不顯示引用區塊');
+                        console.log('❌ [Case C] 引用來源數量 < 10，不顯示引用區塊');
                     }
                 }
                 
@@ -815,11 +815,11 @@ class StreamingChatApp {
                           references.length === 0 ? '引用來源數量為0' : 
                           references.length < 10 ? `引用來源數量 ${references.length} < 10，隱藏引用區塊` : '未知原因';
             
-            console.log('❌ 不顯示引用來源區塊，原因:', reason);
+            console.log('❌ [Case C] 不顯示引用來源區塊，原因:', reason);
             return null;
         }
 
-        console.log('✅ 顯示引用來源區塊，數量:', references.length, '≥ 10');
+        console.log('✅ [Case C] 顯示引用來源區塊，數量:', references.length, '≥ 10');
 
         const referencesDiv = document.createElement('div');
         referencesDiv.className = 'references-section large-reference-set';
@@ -1117,7 +1117,7 @@ class StreamingChatApp {
             }
 
             const result = await response.json();
-            console.log('🌍 翻譯 API 回應:', result);
+            // 移除翻譯 API 詳細回應日誌
             
             // 正確解析翻譯結果
             if (result.data && result.data.translations && result.data.translations[0]) {
@@ -1194,11 +1194,12 @@ class StreamingChatApp {
 
             // 顯示引用來源（採用 Case A 的邏輯：≥10 才顯示）
             if (result.references && result.references.length >= 10) {
-                console.log('📚 顯示引用來源:', result.references.length, '個');
+                console.log('📚 [Case C] 顯示引用來源:', result.references.length, '個');
                 this.createReferencesContainer(responseDiv, result.references);
+                console.log('✅ [Case C] 顯示引用區塊');
             } else {
                 const count = result.references?.length || 0;
-                console.log(`📋 引用來源數量 ${count} < 10，隱藏引用區塊`);
+                console.log(`❌ [Case C] 引用來源數量 ${count} < 10，隱藏引用區塊`);
             }
 
             // 生成並顯示識別碼
@@ -1219,19 +1220,18 @@ class StreamingChatApp {
         const references = [];
         const seenUrls = new Set();
 
-        console.log('=== 提取引用來源詳細信息 ===');
-        console.log('groundingSupports 數量:', groundingMetadata.groundingSupports?.length || 0);
-        console.log('groundingChunks 數量:', groundingMetadata.groundingChunks?.length || 0);
+        console.log('=== [Case C] 提取引用來源詳細信息 ===');
+        console.log('[Case C] groundingSupports 數量:', groundingMetadata.groundingSupports?.length || 0);
+        console.log('[Case C] groundingChunks 數量:', groundingMetadata.groundingChunks?.length || 0);
 
         // 檢查 groundingChunks 是否存在且有內容
         if (!groundingMetadata.groundingChunks || groundingMetadata.groundingChunks.length === 0) {
-            console.log('⚠️ 沒有 groundingChunks 或 groundingChunks 為空');
+            console.log('⚠️ [Case C] 沒有 groundingChunks 或 groundingChunks 為空');
             return references; // 返回空數組
         }
 
         // 直接從 groundingChunks 提取所有有效的 web 引用
         groundingMetadata.groundingChunks.forEach((chunk, index) => {
-            console.log(`🔍 檢查 Chunk ${index}:`, chunk);
             if (chunk && chunk.web) {
                 const url = chunk.web.uri;
                 const title = chunk.web.title || 'Untitled';
@@ -1244,18 +1244,14 @@ class StreamingChatApp {
                         uri: url,
                         snippet: ''
                     });
-                    console.log(`✅ 添加引用 ${references.length}: ${title} -> ${url}`);
+                    console.log(`✅ [Case C] 添加引用 ${references.length}: ${title}`);
                 } else if (url && seenUrls.has(url)) {
-                    console.log(`⚠️ 重複的 URL，已跳過: ${url}`);
-                } else {
-                    console.log(`⚠️ Chunk ${index} 沒有有效的 URL`);
+                    console.log(`⚠️ [Case C] 重複的 URL，已跳過`);
                 }
-            } else {
-                console.log(`⚠️ Chunk ${index} 沒有 web 屬性:`, chunk);
             }
         });
 
-        console.log(`📋 最終提取到 ${references.length} 個有效引用來源`);
+        console.log(`📋 [Case C] 最終提取到 ${references.length} 個有效引用來源`);
         return references;
     }
 
@@ -1319,30 +1315,15 @@ class StreamingChatApp {
     cleanCompleteText(text) {
         if (!text) return '';
         
-        console.log('🧹 開始統一文本清理...');
-        console.log('🔍 清理前文本長度:', text.length);
-        console.log('🔍 清理前文本結尾預覽:', text.substring(Math.max(0, text.length - 200)));
+        // 移除詳細文本清理日誌
         
         // 第一步：移除註腳編號
-        console.log('📝 清理註腳編號...');
-        const beforeFootnoteClean = text.length;
         let cleaned = this.cleanFootnotesFromText(text);
-        console.log(`✅ 註腳清理完成: 清理前 ${beforeFootnoteClean} 字元，清理後 ${cleaned.length} 字元`);
         
         // 第二步：移除參考資料列表
-        console.log('📚 清理參考資料列表...');
-        const beforeRefClean = cleaned.length;
         cleaned = this.cleanReferenceListFromText(cleaned);
         
-        if (beforeRefClean !== cleaned.length) {
-            console.log(`✅ 移除參考資料列表: 清理前 ${beforeRefClean} 字元，清理後 ${cleaned.length} 字元`);
-        } else {
-            console.log('ℹ️  未發現參考資料列表，無需清理');
-        }
-        
-        console.log('🧹 清理後文本長度:', cleaned.length);
-        console.log('🔍 清理後文本結尾預覽:', cleaned.substring(Math.max(0, cleaned.length - 200)));
-        console.log('✅ 統一文本清理完成，註腳和參考資料列表已移除');
+        // 移除詳細清理日誌
         
         return cleaned;
     }
