@@ -16,6 +16,11 @@ class StreamingChatApp {
         this.isStreaming = false;
         this.currentStreamController = null;
         
+        // 翻譯隊列管理 - Case C 專用
+        this.translationQueue = [];
+        this.isProcessingTranslation = false;
+        this.nextTranslationTime = 0; // 下次翻譯的時間戳
+        
         // 調試信息
         console.log('=== StreamingChatApp 初始化 ===');
         console.log('設定的 Worker URL:', this.workerUrl);
@@ -187,6 +192,10 @@ class StreamingChatApp {
         if (!question || this.isStreaming) return;
 
         this.isStreaming = true;
+        
+        // 重置翻譯隊列時間 - Case C 專用
+        this.nextTranslationTime = Date.now();
+        
         this.updateSendButtonState();
 
         // 顯示用戶消息
@@ -339,21 +348,20 @@ class StreamingChatApp {
 
                     // 翻譯思考內容
                     try {
-                        const translatedText = await this.translateText(rawText);
+                        const translatedText = await this.translateWithQueue(rawText);
                         // 處理 Markdown 格式並轉換為 HTML
                         const formattedContent = this.formatMarkdown(translatedText);
                         contentDiv.innerHTML += formattedContent;
                         this.scrollToBottom();
-                        // Case C 思考流程：每次翻譯後延遲1秒
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        // Case C 思考流程：翻譯已經包含延遲，不需要額外等待
                     } catch (e) {
                         console.warn('翻譯思考內容失敗:', e);
                         // 如果翻譯失敗，直接顯示原文
                         const formattedContent = this.formatMarkdown(rawText);
                         contentDiv.innerHTML += formattedContent;
                         this.scrollToBottom();
-                        // Case C 思考流程：翻譯失敗時也延遲1秒
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        // Case C 思考流程：翻譯失敗時也需要延遲1.5秒保持節奏
+                        await new Promise(resolve => setTimeout(resolve, 1500));
                     }
                 },
                 onThinkingEnd: () => {
@@ -525,7 +533,7 @@ class StreamingChatApp {
             // 顯示答案內容
             if (answerText) {
                 // 翻譯並顯示答案
-                const translatedAnswer = await this.translateText(answerText);
+                const translatedAnswer = await this.translateWithQueue(answerText);
                 const cleanedAnswer = this.cleanCompleteText(translatedAnswer);
                 const formattedAnswer = this.formatResponseChunk(cleanedAnswer);
                 answerContainer.innerHTML = formattedAnswer;
@@ -662,7 +670,7 @@ class StreamingChatApp {
             // 顯示答案內容
             if (answerText) {
                 // 翻譯並顯示答案
-                const translatedAnswer = await this.translateText(answerText);
+                const translatedAnswer = await this.translateWithQueue(answerText);
                 const cleanedAnswer = this.cleanCompleteText(translatedAnswer);
                 const formattedAnswer = this.formatResponseChunk(cleanedAnswer);
                 answerContainer.innerHTML = formattedAnswer;
@@ -1079,7 +1087,7 @@ class StreamingChatApp {
     async translateAndAppendThinking(container, content) {
         try {
             // 直接翻譯為中文，不顯示任何英文或提示
-            const translatedContent = await this.translateText(content);
+            const translatedContent = await this.translateWithQueue(content);
             const finalContent = translatedContent || content;
             
             // 格式化翻譯後的內容並直接顯示
@@ -1093,6 +1101,30 @@ class StreamingChatApp {
             container.innerHTML += formattedContent;
             this.scrollToBottom();
         }
+    }
+
+    // Case C 翻譯隊列管理 - 每次翻譯等待1.5秒，並累積排隊延遲
+    async translateWithQueue(text) {
+        const currentTime = Date.now();
+        
+        // 計算這次翻譯應該開始的時間
+        const translationStartTime = Math.max(currentTime, this.nextTranslationTime);
+        
+        // 更新下次翻譯的時間（當前開始時間 + 1.5秒）
+        this.nextTranslationTime = translationStartTime + 1500;
+        
+        // 計算需要等待的時間
+        const waitTime = translationStartTime - currentTime;
+        
+        console.log(`🔄 翻譯隊列: 需等待 ${waitTime}ms, 下次翻譯時間: ${new Date(this.nextTranslationTime).toLocaleTimeString()}`);
+        
+        // 等待到指定時間
+        if (waitTime > 0) {
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        // 執行翻譯
+        return await this.translateText(text);
     }
 
     async translateText(text) {
