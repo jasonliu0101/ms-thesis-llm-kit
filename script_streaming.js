@@ -344,12 +344,16 @@ class StreamingChatApp {
                         const formattedContent = this.formatMarkdown(translatedText);
                         contentDiv.innerHTML += formattedContent;
                         this.scrollToBottom();
+                        // Case C 思考流程：每次翻譯後延遲1秒
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     } catch (e) {
                         console.warn('翻譯思考內容失敗:', e);
                         // 如果翻譯失敗，直接顯示原文
                         const formattedContent = this.formatMarkdown(rawText);
                         contentDiv.innerHTML += formattedContent;
                         this.scrollToBottom();
+                        // Case C 思考流程：翻譯失敗時也延遲1秒
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 },
                 onThinkingEnd: () => {

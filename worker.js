@@ -259,11 +259,12 @@ async function handleGeminiRequest(request, env) {
     // 根據前端參數決定調用策略
     if (enableSearch !== false) {
       // 檢查是否來自 Case C 的答案階段
-      // Case C 會在 options 中設置 caseType: 'streaming' 或類似標識符
-      const isCaseC = options?.caseType === 'streaming' || options?.isStreamingAnswer === true;
+      // Case C：沒有 options 參數且有 showThinking
+      // Case A：有 options 參數
+      const isCaseC = !options && showThinking === true;
       
       if (isCaseC) {
-        // Case C：單一調用，只有 grounding (搜索)
+        // Case C：單一調用，只有 grounding (搜索)，不使用dual mode
         try {
           const response = await callGeminiAPI(question, env, true);
           return createResponse(response);
