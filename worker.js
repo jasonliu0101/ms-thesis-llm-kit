@@ -264,9 +264,9 @@ async function handleGeminiRequest(request, env) {
       const isCaseC = !options && showThinking === true;
       
       if (isCaseC) {
-        // Case C：單一調用，只有 grounding (搜索)，不使用dual mode
+        // Case C：單一調用，只有 grounding (搜索)，不使用dual mode，使用較小的thinking budget
         try {
-          const response = await callGeminiAPI(question, env, true);
+          const response = await callGeminiAPI(question, env, true, 8000);  // Case C 使用 8000 thinking budget
           return createResponse(response);
         } catch (searchError) {
           console.error('❌ Case C 搜索調用失敗:', searchError.message);
@@ -922,13 +922,17 @@ async function callGoogleTranslator(text, target, source, env) {
 }
 
 // 調用 Gemini API
-async function callGeminiAPI(question, env, withSearch = true) {
+async function callGeminiAPI(question, env, withSearch = true, customThinkingBudget = null) {
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY not configured');
   }
 
   console.log(`=== 開始 Gemini API 調用 (withSearch: ${withSearch}) ===`);
+  
+  // 確定使用的 thinking budget
+  const thinkingBudget = customThinkingBudget || 24576;
+  console.log(`🧠 Thinking Budget: ${thinkingBudget}${customThinkingBudget ? ' (Case C自定義)' : ' (默認值)'}`);
 
   // 構建請求體 - 統一的配置
   const requestBody = {
@@ -946,7 +950,7 @@ async function callGeminiAPI(question, env, withSearch = true) {
       maxOutputTokens: 65536,           // 最大輸出 token 數
       responseMimeType: "text/plain",   // 回應格式
       thinking_config: {
-        thinking_budget: 24576,        // 思考流程 token 預算
+        thinking_budget: thinkingBudget,   // Case C 使用8000，其他使用24576
         include_thoughts: true         // 包含思考過程
       }
     },
