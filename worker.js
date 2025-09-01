@@ -1116,6 +1116,9 @@ async function callGeminiAPI(question, env, withSearch = true) {
           // 4.5. 移除「參考資料來源：」及其後的所有內容
           cleanedText = cleanedText.replace(/參考資料來源[：:][\s\S]*$/m, '').trim();
           
+          // 4.6. 移除「資料來源：」及其後的所有內容
+          cleanedText = cleanedText.replace(/資料來源[：:][\s\S]*$/m, '').trim();
+          
           // 5. 移除「**參考資料：**」及其後的所有內容
           cleanedText = cleanedText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
           
@@ -1131,12 +1134,16 @@ async function callGeminiAPI(question, env, withSearch = true) {
           // 8.5. 移除「**參考資料來源：**」及其後的所有內容
           cleanedText = cleanedText.replace(/\*\*參考資料來源[：:]\*\*[\s\S]*$/m, '').trim();
           
+          // 8.6. 移除「**資料來源：**」及其後的所有內容
+          cleanedText = cleanedText.replace(/\*\*資料來源[：:]\*\*[\s\S]*$/m, '').trim();
+          
           // 9. 移除從「---」開始的參考資料部分
           cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?參考資料[：:][\s\S]*$/m, '').trim();
           cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?引用資料[：:][\s\S]*$/m, '').trim();
           cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?引用來源[：:][\s\S]*$/m, '').trim();
           cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?參考來源[：:][\s\S]*$/m, '').trim();
           cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?參考資料來源[：:][\s\S]*$/m, '').trim();
+          cleanedText = cleanedText.replace(/---\s*\n?\s*\*\*?資料來源[：:][\s\S]*$/m, '').trim();
           
           // 10. 移除所有註腳編號 [1], [2], [3] 等，包括連續註腳 [1][2]
           cleanedText = cleanedText.replace(/\[\d+\](\[\d+\])*/g, '');
@@ -1163,6 +1170,9 @@ async function callGeminiAPI(question, env, withSearch = true) {
 
 // 創建回應
 function createResponse(data) {
+  // 記錄完整的答案區 response API 數據
+  console.log('📤 完整答案區 Response API 數據:', JSON.stringify(data, null, 2));
+  
   return new Response(JSON.stringify(data), {
     headers: getCORSHeaders()
   });
