@@ -548,13 +548,21 @@ class StreamingChatApp {
                 if (references && references.length > 0) {
                     console.log('📚 [Case C] 處理引用來源:', references.length, '個');
                     
+                    // 將引用數據存儲到responseDiv中，供後續識別碼使用
+                    responseDiv.dataset.references = JSON.stringify(references);
+                    console.log('💾 已存儲引用數據到responseDiv');
+                    
                     // 檢查是否應該顯示引用來源（≥10個才顯示）
                     if (references.length >= 10) {
                         this.createReferencesContainer(responseDiv, references);
                         console.log('✅ [Case C] 顯示引用區塊');
                     } else {
-                        console.log('❌ [Case C] 引用來源數量 < 10，不顯示引用區塊');
+                        console.log('❌ [Case C] 引用來源數量 < 10，不顯示引用區塊，但已存儲數據供識別碼使用');
                     }
+                } else {
+                    console.log('📚 [Case C] 沒有引用來源');
+                    // 即使沒有引用來源，也存儲空數組
+                    responseDiv.dataset.references = JSON.stringify([]);
                 }
                 
                 // 答案和引用來源處理完成，稍後在流程結束時顯示識別碼
@@ -679,13 +687,21 @@ class StreamingChatApp {
                 if (references && references.length > 0) {
                     console.log('📚 [Case C] 顯示引用來源:', references.length, '個');
                     
+                    // 將引用數據存儲到responseDiv中，供後續識別碼使用
+                    responseDiv.dataset.references = JSON.stringify(references);
+                    console.log('💾 已存儲引用數據到responseDiv');
+                    
                     // 檢查是否應該顯示引用來源（≥10個才顯示）
                     if (references.length >= 10) {
                         this.createReferencesContainer(responseDiv, references);
                         console.log('✅ [Case C] 顯示引用區塊');
                     } else {
-                        console.log('❌ [Case C] 引用來源數量 < 10，不顯示引用區塊');
+                        console.log('❌ [Case C] 引用來源數量 < 10，不顯示引用區塊，但已存儲數據供識別碼使用');
                     }
+                } else {
+                    console.log('📚 [Case C] 沒有引用來源');
+                    // 即使沒有引用來源，也存儲空數組
+                    responseDiv.dataset.references = JSON.stringify([]);
                 }
                 
                 // 答案和引用來源處理完成，稍後在流程結束時顯示識別碼
@@ -1005,16 +1021,29 @@ class StreamingChatApp {
     // 最終階段：顯示識別碼（在所有內容處理完成後）
     showFinalSessionCode(responseDiv, question) {
         try {
-            // 提取已有的引用來源信息
-            const referencesSection = responseDiv.querySelector('.references-section');
+            console.log('🏁 [Case C] 開始最終階段顯示識別碼');
+            console.log('🏁 [Case C] hasShownSessionId 狀態:', this.hasShownSessionId);
+            
+            // 檢查識別碼是否已經存在於DOM中
+            const existingSessionCode = responseDiv.querySelector('.session-code-section');
+            if (existingSessionCode) {
+                console.log('✅ [Case C] 識別碼已存在，跳過顯示');
+                return;
+            }
+            
+            // 不再從DOM提取引用來源，因為引用區塊可能因為數量 < 10 而被隱藏
+            // 使用空引用來源數組，但識別碼仍然會正常顯示
             let references = [];
             
-            if (referencesSection) {
-                const referenceLinks = referencesSection.querySelectorAll('.reference-item');
-                references = Array.from(referenceLinks).map(link => ({
-                    title: link.textContent || '未知來源',
-                    uri: link.href || '#'
-                }));
+            // 檢查是否有隱藏的引用數據存儲在responseDiv中
+            if (responseDiv.dataset && responseDiv.dataset.references) {
+                try {
+                    references = JSON.parse(responseDiv.dataset.references);
+                    console.log('📚 從數據屬性恢復引用來源:', references.length, '個');
+                } catch (e) {
+                    console.warn('⚠️ 解析存儲的引用數據失敗:', e);
+                    references = [];
+                }
             }
 
             // 生成動態識別碼
@@ -1024,11 +1053,50 @@ class StreamingChatApp {
                 references: references
             });
 
-            console.log('🏁 [Case C] 最終階段顯示識別碼:', code);
-            this.showSessionCodeBelowAnswer(responseDiv, code);
+            console.log('🏁 [Case C] 最終階段顯示識別碼:', code, '，引用來源數量:', references.length);
+            
+            // 強制顯示識別碼，不管 hasShownSessionId 的狀態
+            this.forceShowSessionCode(responseDiv, code);
+            
         } catch (error) {
             console.error('❌ 顯示最終識別碼時發生錯誤:', error);
         }
+    }
+
+    // 強制顯示識別碼（忽略 hasShownSessionId 檢查）
+    forceShowSessionCode(responseDiv, code) {
+        const messageContent = responseDiv.querySelector('.message-content');
+        if (!messageContent) {
+            console.error('❌ 找不到 message-content 容器');
+            return;
+        }
+        
+        // 檢查是否已經有識別碼存在，如果有則移除
+        const existingSessionDiv = messageContent.querySelector('.session-code-section');
+        if (existingSessionDiv) {
+            existingSessionDiv.remove();
+            console.log('🗑️ 移除已存在的識別碼');
+        }
+        
+        const sessionDiv = document.createElement('div');
+        sessionDiv.className = 'session-code-section';
+        sessionDiv.innerHTML = `
+            <div class="session-code-display">
+                <i class="fas fa-id-card"></i>
+                <span class="code-label">識別碼：</span>
+                <span class="session-code-text">${code}</span>
+                <button class="copy-code-btn" id="copy-btn-${code}" onclick="window.chatApp.copySessionCode('${code}', this)" title="複製識別碼">
+                    <i class="fas fa-copy"></i>
+                    <span class="copy-btn-text">複製識別碼</span>
+                </button>
+            </div>
+        `;
+        
+        // 確保識別碼在回答區之後顯示
+        this.ensureSessionCodeBelowAnswer(messageContent, sessionDiv);
+        this.hasShownSessionId = true;
+        
+        console.log('✅ [Case C] 強制顯示識別碼完成');
     }
 
     // 新增：顯示答案處理中狀態
