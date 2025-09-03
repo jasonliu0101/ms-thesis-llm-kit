@@ -212,8 +212,8 @@ class StreamingChatApp {
             console.error('串流回應錯誤:', error);
             this.addErrorMessage('抱歉，發生了錯誤。請稍後再試。');
         } finally {
-            // 在所有處理完成後顯示識別碼
-            if (responseDiv && !this.hasShownSessionId) {
+            // 在所有處理完成後顯示識別碼 - 移除 hasShownSessionId 檢查，確保識別碼總是顯示
+            if (responseDiv) {
                 this.showFinalSessionCode(responseDiv, question);
             }
             
@@ -302,8 +302,17 @@ class StreamingChatApp {
             
         } catch (error) {
             console.error('混合模式處理錯誤:', error);
+            
+            // 確保即使在錯誤情況下，responseDiv 也有基本的引用數據存儲
+            if (responseDiv) {
+                responseDiv.dataset.references = JSON.stringify([]);
+                console.log('💾 錯誤情況下存儲空引用數組（混合模式）');
+            }
+            
             this.showErrorInResponse(responseDiv, error.message);
         }
+        
+        return responseDiv;
     }
 
     // 新增：處理 Thinking 階段的串流
@@ -581,6 +590,12 @@ class StreamingChatApp {
                 answerContainer.innerHTML = `<div class="error-message">答案階段發生錯誤: ${error.message}</div>`;
             }
             
+            // 即使發生錯誤，也要確保存儲空的引用數組，以便識別碼能正常顯示
+            if (responseDiv) {
+                responseDiv.dataset.references = JSON.stringify([]);
+                console.log('💾 錯誤情況下存儲空引用數組');
+            }
+            
             throw error;
         }
     }
@@ -718,6 +733,12 @@ class StreamingChatApp {
             if (answerContainer) {
                 this.clearAnswerProcessing(answerContainer);
                 answerContainer.innerHTML = `<div class="error-message">顯示答案時發生錯誤: ${error.message}</div>`;
+            }
+            
+            // 即使發生錯誤，也要確保存儲空的引用數組，以便識別碼能正常顯示
+            if (responseDiv) {
+                responseDiv.dataset.references = JSON.stringify([]);
+                console.log('💾 錯誤情況下存儲空引用數組');
             }
             
             throw error;
