@@ -551,13 +551,13 @@ class StreamingChatApp {
                     }
                 }
                 
-                // 生成並顯示 session code
+                // 生成並顯示 session code（移到回答區下方）
                 const code = this.generateSessionCode({
                     originalQuestion: question,
                     thinking: true,
                     references: references || []
                 });
-                this.showSessionCode(responseDiv, code);
+                this.showSessionCodeBelowAnswer(responseDiv, code);
                 
                 this.scrollToBottom();
             } else {
@@ -688,13 +688,13 @@ class StreamingChatApp {
                     }
                 }
                 
-                // 生成並顯示 session code
+                // 生成並顯示 session code（移到回答區下方）
                 const code = this.generateSessionCode({
                     originalQuestion: question,
                     thinking: true,
                     references: references || []
                 });
-                this.showSessionCode(responseDiv, code);
+                this.showSessionCodeBelowAnswer(responseDiv, code);
                 
                 this.scrollToBottom();
             } else {
@@ -949,6 +949,62 @@ class StreamingChatApp {
         console.log('✅ 識別碼已固定在最下方');
     }
 
+    // 新增：將識別碼顯示在回答區下方（比照Case B格式）
+    showSessionCodeBelowAnswer(responseDiv, code) {
+        if (!this.hasShownSessionId) {
+            const messageContent = responseDiv.querySelector('.message-content');
+            const sessionDiv = document.createElement('div');
+            sessionDiv.className = 'session-code-section';
+            sessionDiv.innerHTML = `
+                <div class="session-code-display">
+                    <i class="fas fa-id-card"></i>
+                    <span class="code-label">識別碼：</span>
+                    <span class="session-code-text">${code}</span>
+                    <button class="copy-code-btn" id="copy-btn-${code}" onclick="window.chatApp.copySessionCode('${code}', this)" title="複製識別碼">
+                        <i class="fas fa-copy"></i>
+                        <span class="copy-btn-text">複製識別碼</span>
+                    </button>
+                </div>
+            `;
+            
+            // 確保識別碼在回答區之後顯示
+            this.ensureSessionCodeBelowAnswer(messageContent, sessionDiv);
+            this.hasShownSessionId = true;
+            
+            console.log('✅ [Case C] 識別碼已顯示在回答區下方');
+        }
+    }
+
+    // 確保識別碼在回答區之後（答案、引用來源之後）
+    ensureSessionCodeBelowAnswer(messageContent, sessionDiv) {
+        // 移除舊的識別碼
+        const existingSessionDiv = messageContent.querySelector('.session-code-section');
+        if (existingSessionDiv) {
+            existingSessionDiv.remove();
+        }
+
+        // 排序其他元素，確保識別碼在最後
+        const children = Array.from(messageContent.children);
+        const getElementPriority = (element) => {
+            if (element.classList.contains('message-header')) return 1;
+            if (element.classList.contains('thinking-section')) return 2;
+            if (element.classList.contains('response-section')) return 3;
+            if (element.classList.contains('references-section')) return 4;
+            if (element.classList.contains('session-code-section')) return 5;
+            return 0;
+        };
+        children.sort((a, b) => getElementPriority(a) - getElementPriority(b));
+
+        // 重新 append 所有元素
+        messageContent.innerHTML = '';
+        children.forEach(element => messageContent.appendChild(element));
+        
+        // 最後添加識別碼
+        messageContent.appendChild(sessionDiv);
+
+        console.log('✅ 識別碼已放置在回答區下方');
+    }
+
     // 新增：顯示答案處理中狀態
     showAnswerProcessing(container) {
         if (!container) return;
@@ -1179,7 +1235,7 @@ class StreamingChatApp {
                     thinking: this.showThinkingCheckbox?.checked,
                     references: []
                 });
-                this.showSessionCode(responseDiv, code);
+                this.showSessionCodeBelowAnswer(responseDiv, code);
                 return;
             }
             
@@ -1230,13 +1286,13 @@ class StreamingChatApp {
                 console.log(`❌ [Case C] 引用來源數量 ${count} < 10，隱藏引用區塊`);
             }
 
-            // 生成並顯示識別碼
+            // 生成並顯示識別碼（移到回答區下方）
             const code = this.generateSessionCode({
                 originalQuestion: question,
                 thinking: this.showThinkingCheckbox?.checked,
                 references: result.references || []
             });
-            this.showSessionCode(responseDiv, code);
+            this.showSessionCodeBelowAnswer(responseDiv, code);
 
         } catch (error) {
             console.error('❌ 完整答案請求錯誤:', error);
