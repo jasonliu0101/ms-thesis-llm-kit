@@ -205,12 +205,18 @@ class StreamingChatApp {
         this.questionInput.value = '';
         this.autoResizeTextarea();
 
+        let responseDiv = null;
         try {
-            await this.startStreamingResponse(question);
+            responseDiv = await this.startStreamingResponse(question);
         } catch (error) {
             console.error('串流回應錯誤:', error);
             this.addErrorMessage('抱歉，發生了錯誤。請稍後再試。');
         } finally {
+            // 在所有處理完成後顯示識別碼
+            if (responseDiv && !this.hasShownSessionId) {
+                this.showFinalSessionCode(responseDiv, question);
+            }
+            
             this.isStreaming = false;
             this.updateSendButtonState();
         }
@@ -551,13 +557,7 @@ class StreamingChatApp {
                     }
                 }
                 
-                // 生成並顯示 session code（移到回答區下方）
-                const code = this.generateSessionCode({
-                    originalQuestion: question,
-                    thinking: true,
-                    references: references || []
-                });
-                this.showSessionCodeBelowAnswer(responseDiv, code);
+                // 答案和引用來源處理完成，稍後在流程結束時顯示識別碼
                 
                 this.scrollToBottom();
             } else {
@@ -688,13 +688,7 @@ class StreamingChatApp {
                     }
                 }
                 
-                // 生成並顯示 session code（移到回答區下方）
-                const code = this.generateSessionCode({
-                    originalQuestion: question,
-                    thinking: true,
-                    references: references || []
-                });
-                this.showSessionCodeBelowAnswer(responseDiv, code);
+                // 答案和引用來源處理完成，稍後在流程結束時顯示識別碼
                 
                 this.scrollToBottom();
             } else {
@@ -712,6 +706,9 @@ class StreamingChatApp {
             
             throw error;
         }
+        
+        // 返回responseDiv供後續識別碼顯示使用
+        return responseDiv;
     }
 
     createResponseContainer() {
@@ -1005,6 +1002,35 @@ class StreamingChatApp {
         console.log('✅ 識別碼已放置在回答區下方');
     }
 
+    // 最終階段：顯示識別碼（在所有內容處理完成後）
+    showFinalSessionCode(responseDiv, question) {
+        try {
+            // 提取已有的引用來源信息
+            const referencesSection = responseDiv.querySelector('.references-section');
+            let references = [];
+            
+            if (referencesSection) {
+                const referenceLinks = referencesSection.querySelectorAll('.reference-item');
+                references = Array.from(referenceLinks).map(link => ({
+                    title: link.textContent || '未知來源',
+                    uri: link.href || '#'
+                }));
+            }
+
+            // 生成動態識別碼
+            const code = this.generateSessionCode({
+                originalQuestion: question,
+                thinking: true,
+                references: references
+            });
+
+            console.log('🏁 [Case C] 最終階段顯示識別碼:', code);
+            this.showSessionCodeBelowAnswer(responseDiv, code);
+        } catch (error) {
+            console.error('❌ 顯示最終識別碼時發生錯誤:', error);
+        }
+    }
+
     // 新增：顯示答案處理中狀態
     showAnswerProcessing(container) {
         if (!container) return;
@@ -1235,7 +1261,7 @@ class StreamingChatApp {
                     thinking: this.showThinkingCheckbox?.checked,
                     references: []
                 });
-                this.showSessionCodeBelowAnswer(responseDiv, code);
+                // 識別碼將在主流程結束後統一顯示
                 return;
             }
             
@@ -1292,7 +1318,7 @@ class StreamingChatApp {
                 thinking: this.showThinkingCheckbox?.checked,
                 references: result.references || []
             });
-            this.showSessionCodeBelowAnswer(responseDiv, code);
+            // 識別碼將在主流程結束後統一顯示
 
         } catch (error) {
             console.error('❌ 完整答案請求錯誤:', error);
