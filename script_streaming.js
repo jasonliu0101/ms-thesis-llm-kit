@@ -62,7 +62,7 @@ class StreamingChatApp {
             }
         }
 
-        // 第二位：2表示為Streaming版本
+        // 第二位：2表示為版本標識
         const digit2 = '2';
 
         // 第三位：判斷是否開啟思考流程
@@ -209,14 +209,10 @@ class StreamingChatApp {
         try {
             responseDiv = await this.startStreamingResponse(question);
         } catch (error) {
-            console.error('串流回應錯誤:', error);
+            console.error('回應錯誤:', error);
             this.addErrorMessage('抱歉，發生了錯誤。請稍後再試。');
         } finally {
-            // 在所有處理完成後顯示識別碼 - 移除 hasShownSessionId 檢查，確保識別碼總是顯示
-            if (responseDiv) {
-                this.showFinalSessionCode(responseDiv, question);
-            }
-            
+            // 識別碼已經在思考結束時顯示，這裡不需要再顯示
             this.isStreaming = false;
             this.updateSendButtonState();
         }
@@ -255,14 +251,25 @@ class StreamingChatApp {
             
             // 併發執行兩個階段的請求
             const answerPromise = this.processAnswerPhaseBackground(question, responseDiv)
-                .then(data => {
+                .then(async data => {
                     console.log('📋 答案數據已準備就緒');
                     answerData = data;
                     // 如果思考已結束且答案還未顯示，立即顯示答案
                     if (thinkingEnded && !answerDisplayed) {
-                        console.log('⚡ 思考已結束，立即顯示答案');
+                        console.log('⚡ 思考已結束，立即顯示答案（跳過處理中狀態）');
                         answerDisplayed = true;
-                        return this.displayAnswerResult(responseDiv, answerData, question);
+                        
+                        // 確保答案容器存在
+                        let answerContainer = responseDiv.querySelector('.response-section');
+                        if (!answerContainer) {
+                            answerContainer = this.createAnswerContainer(responseDiv);
+                        }
+                        
+                        await this.displayAnswerResult(responseDiv, answerData, question);
+                        // 答案顯示完成後顯示識別碼
+                        console.log('🏷️ 答案顯示完成，顯示識別碼');
+                        this.showFinalSessionCode(responseDiv, question);
+                        return data;
                     }
                     return data;
                 })
@@ -271,32 +278,58 @@ class StreamingChatApp {
                     throw error;
                 });
             
-            const thinkingPromise = this.processThinkingPhase(question, responseDiv, () => {
+            const thinkingPromise = this.processThinkingPhase(question, responseDiv, async () => {
                 console.log('🎯 思考 chunk 結束回調');
                 thinkingEnded = true;
                 
-                // 思考結束時立即創建答案容器並顯示處理中狀態
-                const answerContainer = this.createAnswerContainer(responseDiv);
-                this.showAnswerProcessing(answerContainer);
+                // 思考 chunk 結束，但不立即創建答案容器
+                // 等待所有翻譯完成後再創建答案容器
+                console.log('⏳ 思考 chunk 結束，等待翻譯完成...');
                 
-                // 如果答案數據已準備好且還未顯示，立即顯示答案
+                // 如果答案數據已準備好且還未顯示，記錄但不立即顯示
                 if (answerData && !answerDisplayed) {
-                    console.log('⚡ 答案已準備，立即顯示');
-                    answerDisplayed = true;
-                    this.displayAnswerResult(responseDiv, answerData, question);
+                    console.log('📋 答案數據已準備，等待翻譯完成後顯示');
                 }
             });
             
-            // 等待思考階段完成（但答案可能已經在思考過程中顯示了）
+            // 等待思考階段完成（包括所有翻譯完成）
             await thinkingPromise;
+            console.log('✅ 思考階段完全完成，包括所有翻譯');
             
-            // 如果答案還沒顯示，等待答案完成後顯示
-            if (!answerDisplayed) {
+            // 檢查答案是否已經顯示了
+            if (answerDisplayed) {
+                console.log('✅ 答案已經顯示完成，無需進一步處理');
+                return responseDiv;
+            }
+            
+            // 創建答案容器（如果還沒有的話）
+            let answerContainer = responseDiv.querySelector('.response-section');
+            if (!answerContainer) {
+                answerContainer = this.createAnswerContainer(responseDiv);
+            }
+            
+            // 檢查答案是否已準備好但還沒顯示
+            if (answerData && !answerDisplayed) {
+                console.log('⚡ 答案已準備，立即顯示（不顯示處理中狀態）');
+                answerDisplayed = true;
+                await this.displayAnswerResult(responseDiv, answerData, question);
+                // 答案顯示完成後顯示識別碼
+                console.log('🏷️ 答案顯示完成，顯示識別碼');
+                this.showFinalSessionCode(responseDiv, question);
+            } else if (!answerDisplayed) {
+                // 答案還沒準備好，顯示處理中狀態作為 buffer
+                console.log('⏳ 答案尚未準備，顯示處理中狀態');
+                this.showAnswerProcessing(answerContainer);
+                
+                // 等待答案完成後顯示
                 console.log('⏳ 等待答案完成...');
                 answerData = await answerPromise;
                 if (!answerDisplayed) {
                     answerDisplayed = true;
                     await this.displayAnswerResult(responseDiv, answerData, question);
+                    // 答案顯示完成後顯示識別碼
+                    console.log('🏷️ 答案顯示完成，顯示識別碼');
+                    this.showFinalSessionCode(responseDiv, question);
                 }
             }
             
@@ -317,6 +350,10 @@ class StreamingChatApp {
 
     // 新增：處理 Thinking 階段的串流
     async processThinkingPhase(question, responseDiv, onThinkingChunkEnd = null) {
+        // 用於存儲 answer_chunk 內容的變數
+        responseDiv.dataset.answerChunks = JSON.stringify([]);
+        let answerChunks = [];
+        
         try {
             const response = await fetch(`${this.workerUrl}/stream-gemini`, {
                 method: 'POST',
@@ -375,8 +412,8 @@ class StreamingChatApp {
                         const formattedContent = this.formatMarkdown(rawText);
                         contentDiv.innerHTML += formattedContent;
                         this.scrollToBottom();
-                        // Case C 思考流程：翻譯失敗時也需要延遲1.5秒保持節奏
-                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        // Case C 思考流程：翻譯失敗時也需要延遲2秒保持節奏
+                        await new Promise(resolve => setTimeout(resolve, 2000));
                     }
                 },
                 onThinkingEnd: () => {
@@ -448,9 +485,15 @@ class StreamingChatApp {
                                 continue;
                             }
                             
-                            // 隱藏答案階段的所有內容
+                            // 收集答案階段的內容作為備用方案
                             if (payload.type === 'answer_start' || payload.type === 'answer_chunk') {
-                                console.log('🙈 隱藏答案內容:', payload.type);
+                                console.log('� 收集答案內容作為備用方案:', payload.type);
+                                // 儲存 answer_chunk 內容
+                                if (payload.type === 'answer_chunk' && payload.content) {
+                                    answerChunks.push(payload.content);
+                                    responseDiv.dataset.answerChunks = JSON.stringify(answerChunks);
+                                    console.log('📥 已收集 answer_chunk 內容，目前數量:', answerChunks.length);
+                                }
                                 continue;
                             }
 
@@ -618,6 +661,32 @@ class StreamingChatApp {
             });
 
             if (!response.ok) {
+                // 如果是 500 錯誤，嘗試使用收集的 answer_chunk
+                if (response.status === 500) {
+                    console.warn('⚠️ Answer API 返回 500 錯誤，嘗試使用備用方案');
+                    
+                    // 檢查是否有收集到 answer_chunk
+                    let answerChunks = [];
+                    try {
+                        answerChunks = JSON.parse(responseDiv.dataset.answerChunks || '[]');
+                    } catch (e) {
+                        console.error('解析 answerChunks 失敗:', e);
+                    }
+                    
+                    if (answerChunks.length > 0) {
+                        console.log('🛟 使用收集到的 answer_chunk 作為備用答案');
+                        // 組合所有 answer_chunk 內容作為最終答案
+                        const fallbackAnswerText = answerChunks.join('');
+                        
+                        return {
+                            answerText: fallbackAnswerText,
+                            references: [],  // 備用答案沒有引用來源
+                            question,
+                            isFallback: true  // 標記為備用答案
+                        };
+                    }
+                }
+                
                 throw new Error(`Answer API error: ${response.status} ${response.statusText}`);
             }
 
@@ -662,6 +731,28 @@ class StreamingChatApp {
             
         } catch (error) {
             console.error('背景 Answer 階段錯誤:', error);
+            
+            // 如果發生任何錯誤，嘗試使用收集的 answer_chunk
+            let answerChunks = [];
+            try {
+                answerChunks = JSON.parse(responseDiv.dataset.answerChunks || '[]');
+            } catch (e) {
+                console.error('解析 answerChunks 失敗:', e);
+            }
+            
+            if (answerChunks.length > 0) {
+                console.log('🛟 使用收集到的 answer_chunk 作為備用答案（錯誤後備用）');
+                // 組合所有 answer_chunk 內容作為最終答案
+                const fallbackAnswerText = answerChunks.join('');
+                
+                return {
+                    answerText: fallbackAnswerText,
+                    references: [],  // 備用答案沒有引用來源
+                    question,
+                    isFallback: true  // 標記為備用答案
+                };
+            }
+            
             throw error;
         }
     }
@@ -671,7 +762,7 @@ class StreamingChatApp {
         let answerContainer = null;
         
         try {
-            const { answerText, references } = answerData;
+            const { answerText, references, isFallback } = answerData;
             
             // 尋找已存在的答案容器（應該在 onThinkingEnd 時已創建）
             answerContainer = responseDiv.querySelector('.response-section .response-content');
@@ -692,31 +783,42 @@ class StreamingChatApp {
 
             // 顯示答案內容
             if (answerText) {
-                // 翻譯並顯示答案
-                const translatedAnswer = await this.translateWithQueue(answerText);
-                const cleanedAnswer = this.cleanCompleteText(translatedAnswer);
-                const formattedAnswer = this.formatResponseChunk(cleanedAnswer);
-                answerContainer.innerHTML = formattedAnswer;
-                
-                // 處理引用來源
-                if (references && references.length > 0) {
-                    console.log('📚 [Case C] 顯示引用來源:', references.length, '個');
+                // 檢查是否為備用答案（來自 answer_chunk）
+                if (isFallback) {
+                    console.log('📢 顯示備用答案（來自 answer_chunk）');
+                    // 備用答案直接顯示，不進行翻譯處理
+                    const formattedAnswer = this.formatResponseChunk(answerText);
+                    answerContainer.innerHTML = formattedAnswer;
                     
-                    // 將引用數據存儲到responseDiv中，供後續識別碼使用
-                    responseDiv.dataset.references = JSON.stringify(references);
-                    console.log('💾 已存儲引用數據到responseDiv');
-                    
-                    // 檢查是否應該顯示引用來源（≥10個才顯示）
-                    if (references.length >= 10) {
-                        this.createReferencesContainer(responseDiv, references);
-                        console.log('✅ [Case C] 顯示引用區塊');
-                    } else {
-                        console.log('❌ [Case C] 引用來源數量 < 10，不顯示引用區塊，但已存儲數據供識別碼使用');
-                    }
-                } else {
-                    console.log('📚 [Case C] 沒有引用來源');
-                    // 即使沒有引用來源，也存儲空數組
+                    // 備用答案沒有引用來源
                     responseDiv.dataset.references = JSON.stringify([]);
+                } else {
+                    // 正常答案流程：翻譯並顯示
+                    const translatedAnswer = await this.translateWithQueue(answerText);
+                    const cleanedAnswer = this.cleanCompleteText(translatedAnswer);
+                    const formattedAnswer = this.formatResponseChunk(cleanedAnswer);
+                    answerContainer.innerHTML = formattedAnswer;
+                    
+                    // 處理引用來源
+                    if (references && references.length > 0) {
+                        console.log('📚 [Case C] 顯示引用來源:', references.length, '個');
+                        
+                        // 將引用數據存儲到responseDiv中，供後續識別碼使用
+                        responseDiv.dataset.references = JSON.stringify(references);
+                        console.log('💾 已存儲引用數據到responseDiv');
+                        
+                        // 檢查是否應該顯示引用來源（≥10個才顯示）
+                        if (references.length >= 10) {
+                            this.createReferencesContainer(responseDiv, references);
+                            console.log('✅ [Case C] 顯示引用區塊');
+                        } else {
+                            console.log('❌ [Case C] 引用來源數量 < 10，不顯示引用區塊，但已存儲數據供識別碼使用');
+                        }
+                    } else {
+                        console.log('📚 [Case C] 沒有引用來源');
+                        // 即使沒有引用來源，也存儲空數組
+                        responseDiv.dataset.references = JSON.stringify([]);
+                    }
                 }
                 
                 // 答案和引用來源處理完成，稍後在流程結束時顯示識別碼
@@ -1011,52 +1113,100 @@ class StreamingChatApp {
 
     // 確保識別碼在回答區之後（答案、引用來源之後）
     ensureSessionCodeBelowAnswer(messageContent, sessionDiv) {
-        // 移除舊的識別碼
-        const existingSessionDiv = messageContent.querySelector('.session-code-section');
-        if (existingSessionDiv) {
-            existingSessionDiv.remove();
-        }
-
-        // 排序其他元素，確保識別碼在最後
-        const children = Array.from(messageContent.children);
-        const getElementPriority = (element) => {
-            if (element.classList.contains('message-header')) return 1;
-            if (element.classList.contains('thinking-section')) return 2;
-            if (element.classList.contains('response-section')) return 3;
-            if (element.classList.contains('references-section')) return 4;
-            if (element.classList.contains('session-code-section')) return 5;
-            return 0;
-        };
-        children.sort((a, b) => getElementPriority(a) - getElementPriority(b));
-
-        // 重新 append 所有元素
-        messageContent.innerHTML = '';
-        children.forEach(element => messageContent.appendChild(element));
+        console.log('🔧 [Case C] ensureSessionCodeBelowAnswer 開始');
         
-        // 最後添加識別碼
-        messageContent.appendChild(sessionDiv);
+        const place = () => {
+            const references = messageContent.querySelector('.references-section');
+            const response = messageContent.querySelector('.response-section');
+            const anchor = references || response;
 
-        console.log('✅ 識別碼已放置在回答區下方');
+            // 先移除舊的識別碼（支援兩種不同的 CSS 類名）
+            messageContent.querySelectorAll('.session-code-section, .session-id-display')
+                .forEach(n => {
+                    if (n !== sessionDiv) { // 避免移除要插入的元素
+                        n.remove();
+                        console.log('�️ 移除舊識別碼');
+                    }
+                });
+
+            if (anchor && anchor.nextSibling) {
+                anchor.parentNode.insertBefore(sessionDiv, anchor.nextSibling);
+                console.log('✅ 識別碼已插入到', anchor.className, '之後');
+                return true;
+            } else if (anchor) {
+                anchor.parentNode.appendChild(sessionDiv);
+                console.log('✅ 識別碼已附加到', anchor.className, '之後');
+                return true;
+            } else {
+                // 回答區還沒生出來，先暫緩
+                console.log('⏳ 回答區尚未生成，等待中...');
+                return false;
+            }
+        };
+
+        if (place()) return; // 已經放好
+
+        // 監聽回答區生成後再放
+        console.log('👀 設置 MutationObserver 等待回答區生成');
+        const mo = new MutationObserver(() => {
+            console.log('🔄 檢測到 DOM 變化，嘗試放置識別碼');
+            if (place()) {
+                mo.disconnect();
+                console.log('✅ MutationObserver 已完成任務');
+            }
+        });
+        mo.observe(messageContent, { childList: true, subtree: false });
     }
 
     // 最終階段：顯示識別碼（在所有內容處理完成後）
     showFinalSessionCode(responseDiv, question) {
         try {
-            console.log('🏁 [Case C] 開始最終階段顯示識別碼');
+            console.log('🏁 [Case C] 開始最終階段顯示識別碼 - 時間:', new Date().toISOString());
             console.log('🏁 [Case C] hasShownSessionId 狀態:', this.hasShownSessionId);
+            console.log('🏁 [Case C] responseDiv 存在:', !!responseDiv);
             
+            if (!responseDiv) {
+                console.error('❌ [Case C] responseDiv 為 null，無法顯示識別碼');
+                return;
+            }
+            
+            // 直接顯示，不需要延遲
+            this.displaySessionCodeWhenReady(responseDiv, question);
+            
+        } catch (error) {
+            console.error('❌ 顯示最終識別碼時發生錯誤:', error);
+            console.error('❌ 錯誤堆棧:', error.stack);
+        }
+    }
+
+    // 新增：當回答區域準備好時顯示識別碼
+    displaySessionCodeWhenReady(responseDiv, question) {
+        try {
+            const messageContent = responseDiv.querySelector('.message-content');
+            if (!messageContent) {
+                console.error('❌ [Case C] 找不到 message-content');
+                return;
+            }
+
+            // 檢查回答區域是否存在
+            const responseSection = messageContent.querySelector('.response-section');
+            const thinkingSection = messageContent.querySelector('.thinking-section');
+            
+            console.log('📋 [Case C] DOM 狀態檢查:', {
+                hasResponseSection: !!responseSection,
+                hasThinkingSection: !!thinkingSection,
+                totalChildren: messageContent.children.length
+            });
+
             // 檢查識別碼是否已經存在於DOM中
-            const existingSessionCode = responseDiv.querySelector('.session-code-section');
+            const existingSessionCode = responseDiv.querySelector('.session-code-section, .session-id-display');
             if (existingSessionCode) {
                 console.log('✅ [Case C] 識別碼已存在，跳過顯示');
                 return;
             }
             
-            // 不再從DOM提取引用來源，因為引用區塊可能因為數量 < 10 而被隱藏
-            // 使用空引用來源數組，但識別碼仍然會正常顯示
+            // 獲取引用數據
             let references = [];
-            
-            // 檢查是否有隱藏的引用數據存儲在responseDiv中
             if (responseDiv.dataset && responseDiv.dataset.references) {
                 try {
                     references = JSON.parse(responseDiv.dataset.references);
@@ -1065,6 +1215,8 @@ class StreamingChatApp {
                     console.warn('⚠️ 解析存儲的引用數據失敗:', e);
                     references = [];
                 }
+            } else {
+                console.log('📚 [Case C] 沒有存儲的引用數據，使用空數組');
             }
 
             // 生成動態識別碼
@@ -1079,21 +1231,44 @@ class StreamingChatApp {
             // 強制顯示識別碼，不管 hasShownSessionId 的狀態
             this.forceShowSessionCode(responseDiv, code);
             
+            console.log('🏁 [Case C] displaySessionCodeWhenReady 完成 - 時間:', new Date().toISOString());
+            
         } catch (error) {
-            console.error('❌ 顯示最終識別碼時發生錯誤:', error);
+            console.error('❌ displaySessionCodeWhenReady 錯誤:', error);
+            console.error('❌ 錯誤堆棧:', error.stack);
         }
     }
 
     // 強制顯示識別碼（忽略 hasShownSessionId 檢查）
     forceShowSessionCode(responseDiv, code) {
+        console.log('🔧 [Case C] 強制顯示識別碼開始, code:', code);
+        
         const messageContent = responseDiv.querySelector('.message-content');
         if (!messageContent) {
             console.error('❌ 找不到 message-content 容器');
+            console.error('❌ responseDiv 結構:', responseDiv.outerHTML.substring(0, 200) + '...');
             return;
         }
         
+        console.log('✅ [Case C] 找到 message-content 容器');
+
+        // 檢查當前 DOM 結構
+        const currentStructure = Array.from(messageContent.children).map(child => {
+            return {
+                className: child.className,
+                type: child.classList.contains('message-header') ? 'header' :
+                      child.classList.contains('thinking-section') ? 'thinking' :
+                      child.classList.contains('response-section') ? 'answer' :
+                      child.classList.contains('references-section') ? 'references' :
+                      child.classList.contains('session-code-section') ? 'session-code' :
+                      child.classList.contains('session-id-display') ? 'session-id' : 'unknown'
+            };
+        });
+        
+        console.log('📋 [Case C] 當前 DOM 結構:', currentStructure);
+        
         // 檢查是否已經有識別碼存在，如果有則移除
-        const existingSessionDiv = messageContent.querySelector('.session-code-section');
+        const existingSessionDiv = messageContent.querySelector('.session-code-section, .session-id-display');
         if (existingSessionDiv) {
             existingSessionDiv.remove();
             console.log('🗑️ 移除已存在的識別碼');
@@ -1113,11 +1288,39 @@ class StreamingChatApp {
             </div>
         `;
         
+        console.log('📋 [Case C] 識別碼 HTML 已創建');
+        
         // 確保識別碼在回答區之後顯示
-        this.ensureSessionCodeBelowAnswer(messageContent, sessionDiv);
+        try {
+            this.ensureSessionCodeBelowAnswer(messageContent, sessionDiv);
+            console.log('✅ [Case C] ensureSessionCodeBelowAnswer 完成');
+        } catch (error) {
+            console.error('❌ ensureSessionCodeBelowAnswer 失敗，直接 append:', error);
+            // 如果排序失敗，直接添加到最後
+            messageContent.appendChild(sessionDiv);
+        }
+        
         this.hasShownSessionId = true;
         
-        console.log('✅ [Case C] 強制顯示識別碼完成');
+        // 驗證識別碼確實被添加到 DOM 中
+        const verifySessionDiv = messageContent.querySelector('.session-code-section');
+        if (verifySessionDiv) {
+            console.log('✅ [Case C] 強制顯示識別碼完成並驗證成功');
+            
+            // 記錄最終的 DOM 結構
+            const finalStructure = Array.from(messageContent.children).map(child => {
+                return child.classList.contains('message-header') ? 'header' :
+                       child.classList.contains('thinking-section') ? 'thinking' :
+                       child.classList.contains('response-section') ? 'answer' :
+                       child.classList.contains('references-section') ? 'references' :
+                       child.classList.contains('session-code-section') ? 'session-code' :
+                       child.classList.contains('session-id-display') ? 'session-id' : 'unknown';
+            });
+            console.log('📋 [Case C] 最終 DOM 結構順序:', finalStructure);
+            
+        } else {
+            console.error('❌ [Case C] 識別碼驗證失敗，未在 DOM 中找到');
+        }
     }
 
     // 新增：顯示答案處理中狀態
@@ -1274,15 +1477,15 @@ class StreamingChatApp {
         }
     }
 
-    // Case C 翻譯隊列管理 - 每次翻譯等待1.5秒，並累積排隊延遲
+    // Case C 翻譯隊列管理 - 每次翻譯等待2秒，並累積排隊延遲
     async translateWithQueue(text) {
         const currentTime = Date.now();
         
         // 計算這次翻譯應該開始的時間
         const translationStartTime = Math.max(currentTime, this.nextTranslationTime);
         
-        // 更新下次翻譯的時間（當前開始時間 + 1.5秒）
-        this.nextTranslationTime = translationStartTime + 1500;
+        // 更新下次翻譯的時間（當前開始時間 + 2秒）
+        this.nextTranslationTime = translationStartTime + 2000;
         
         // 計算需要等待的時間
         const waitTime = translationStartTime - currentTime;

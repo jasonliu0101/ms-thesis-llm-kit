@@ -654,6 +654,11 @@ body {
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.05);
 }
 
+/* 覆蓋 thinking-process 的 order */
+.message .message-content .thinking-process {
+    order: 2 !important;
+}
+
 .thinking-process h4 {
     color: #667eea;
     margin-bottom: 8px;
@@ -3099,3 +3104,23 @@ sup {
     0%, 100% { opacity: 0.6; }
     50% { opacity: 1; }
 }
+
+/* 修復識別碼位置 - 確保 session 區塊以自然順序呈現，避免被 flex-direction 反轉 */
+.message .message-content {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* 確保父層也是自然流 */
+.message {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* 明確設定所有區塊的視覺順序 - 在自然流下數字小在上、大在下 */
+.message .message-content .message-header { order: 1 !important; }
+.message .message-content .thinking-section { order: 2 !important; }
+.message .message-content .response-section { order: 3 !important; }
+.message .message-content .references-section { order: 4 !important; }
+.message .message-content .session-code-section,
+.message .message-content .session-id-display { order: 5 !important; } /* 永遠最下 */

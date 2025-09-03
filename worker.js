@@ -266,7 +266,7 @@ async function handleGeminiRequest(request, env) {
       if (isCaseC) {
         // Case C：單一調用，只有 grounding (搜索)，不使用dual mode，使用較小的thinking budget
         try {
-          const response = await callGeminiAPI(question, env, true, 8000);  // Case C 使用 8000 thinking budget
+          const response = await callGeminiAPI(question, env, true, 12000);  // Case C 使用 12000 thinking budget
           return createResponse(response);
         } catch (searchError) {
           console.error('❌ Case C 搜索調用失敗:', searchError.message);
@@ -950,7 +950,7 @@ async function callGeminiAPI(question, env, withSearch = true, customThinkingBud
       maxOutputTokens: 65536,           // 最大輸出 token 數
       responseMimeType: "text/plain",   // 回應格式
       thinking_config: {
-        thinking_budget: thinkingBudget,   // Case C 使用8000，其他使用24576
+        thinking_budget: thinkingBudget,   // Case C 使用12000，其他使用24576
         include_thoughts: true         // 包含思考過程
       }
     },
