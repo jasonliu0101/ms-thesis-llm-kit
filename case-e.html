@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>研究用 AI 法律問答系統</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-robot"></i> 研究用 AI 法律問答系統</h1>
+            
+            <!-- Top Right Settings - 隱藏 -->
+            <div class="top-right-settings" style="display: none;">
+                <button id="settingsToggle" class="settings-toggle-btn">
+                    <i class="fas fa-cog"></i>
+                </button>
+                
+                <div class="settings-panel" id="settingsPanel">
+                    <!-- 設定選項 -->
+                    <div class="options-section">
+                        <h3><i class="fas fa-sliders-h"></i> 顯示選項</h3>
+                        <div class="options-grid">
+                            <label class="option-item">
+                                <input type="checkbox" id="showThinking" checked>
+                                <span class="checkmark"></span>
+                                <span class="option-text">
+                                    <i class="fas fa-brain"></i> 思考流程
+                                </span>
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" id="showReferences" checked>
+                                <span class="checkmark"></span>
+                                <span class="option-text">
+                                    <i class="fas fa-link"></i> 引用來源
+                                </span>
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" id="enableSearch" checked>
+                                <span class="checkmark"></span>
+                                <span class="option-text">
+                                    <i class="fas fa-search"></i> 混合模式
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Research Welcome Modal -->
+        <div class="research-welcome-modal" id="researchWelcomeModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <i class="fas fa-university"></i>
+                    <h2>研究用 AI 法律問答系統</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="research-notice">
+                        <div class="notice-icon">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <div class="notice-content">
+                            <h3>歡迎參與研究測試！</h3>
+                            <p>這是一個<strong>研究用的 AI 法律問答系統</strong>，我們想了解此類系統的使用體驗。</p>
+                            <!-- 移除串流說明 -->
+                        </div>
+                    </div>
+                    
+                    <div class="evaluation-guide">
+                        <h4><i class="fas fa-clipboard-check"></i> 請以「整體體驗」評估</h4>
+                        <p class="guide-subtitle">請不要糾結法律正確性及文句通順度，我們想知道：</p>
+                        <ul class="guide-list">
+                            <li><i class="fas fa-check"></i> 這樣的串流系統是否好用</li>
+                            <li><i class="fas fa-check"></i> 思考流程是否有助理解</li>
+                            <li><i class="fas fa-check"></i> 說明是否清楚</li>
+                            <li><i class="fas fa-check"></i> 能否帶您找到方向</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="usage-steps">
+                        <h4><i class="fas fa-list-ol"></i> 使用步驟</h4>
+                        <div class="steps">
+                            <div class="step">
+                                <span class="step-number">1</span>
+                                <div class="step-content">
+                                    <strong>提問</strong>
+                                    <p>先問一個法律相關問題（不限主題；只是為了讓您體驗互動流程）</p>
+                                    <p class="step-hint"><i class="fas fa-lightbulb"></i> 您也可以參考下方提供的三個範例問題，或自行提出感興趣的法律問題</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">2</span>
+                                <div class="step-content">
+                                    <strong>觀察串流過程</strong>
+                                    <p>觀察即時回覆與思考流程，從「宏觀面向」觀察（是否清楚、對過程產生的回應是否感到信賴等）</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">3</span>
+                                <div class="step-content">
+                                    <strong>記錄</strong>
+                                    <p>記下系統顯示的「識別碼」（會在第一次回覆後出現），回到問卷把識別碼貼上，就能串回您剛才的作答</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="start-btn" id="startSystemBtn" disabled>
+                        <i class="fas fa-clock"></i>
+                        <span id="startBtnText">請先閱讀說明 (10秒)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Main Chat Area -->
+            <div class="main-chat-container">
+                <!-- Chat Container - Maximized -->
+                <div class="chat-container" id="chatContainer">
+                    <div class="welcome-message">
+                        <i class="fas fa-comments"></i>
+                        <h3>歡迎使用研究用 AI 法律問答系統</h3>
+                        <p>請輸入您的問題，我會即時為您提供詳細的回答、思考流程和相關資源</p>
+                        <!-- 移除功能特色 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Input Area -->
+            <div class="floating-input-area">
+                <!-- Compact Quick Questions -->
+                <div class="quick-questions-compact">
+                    <div class="question-buttons">
+                        <button class="question-btn-compact" data-question="如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？">
+                            <i class="fas fa-gavel"></i> 車輛竊取
+                        </button>
+                        <button class="question-btn-compact" data-question="鄰居的狗經常在夜間吠叫影響睡眠，我可以採取什麼法律行動？">
+                            <i class="fas fa-home"></i> 噪音干擾
+                        </button>
+                        <button class="question-btn-compact" data-question="我在網路上購買商品但收到假貨，賣家拒絕退款怎麼辦？">
+                            <i class="fas fa-shopping-cart"></i> 消費糾紛
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Floating Input Container -->
+                <div class="floating-input-container">
+                    <div class="input-section">
+                        <div class="input-container">
+                            <textarea id="questionInput" placeholder="請輸入您的問題..." rows="1" maxlength="50000"></textarea>
+                            <button id="sendButton" class="send-btn" disabled>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Disclaimer -->
+                <div class="ai-disclaimer">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>本系統可能會出錯。請查核重要資訊。</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 載入中的覆蓋層 -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>AI 正在準備回應...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script_streaming.js"></script>
+</body>
+</html>

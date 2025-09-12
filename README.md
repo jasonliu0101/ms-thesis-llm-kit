@@ -2,7 +2,24 @@
 
 > 基於 Google Gemini 2.5 Flash 的現代化 AI 問答平台，提供智能搜索、思考流程可視化與引用追溯功能
 
-![AI 問答系統](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-blue) ![版本](https://img.shields.io/badge/版本-v2.0-green) ![授權](https://img.shields.io/badge/授權-MIT-yellow)
+![AI 問答系統](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-blue) ![版本](htt### Case C (串流模式) 🆕
+```
+前端 (SSE/## 🆚 產品對比
+
+| 特性 | 本系統 Case A/B | 本系統 Case C/D | ChatGPT Web | Gemini Web |
+|------|----------------|-----------------|-------------|------------|
+| 免費使用 | ✅ | ✅ | ❌ (有限制) | ✅ |
+| 即時串流 | ❌ | ✅ | ✅ | ✅ |
+| 即時搜尋 | ✅ (Gemini) | ✅ (Gemini) | ✅ | ✅ |
+| 思考流程 | ✅ | ✅ (即時) | ❌ | 部分支持 |
+| 自定義部署 | ✅ | ✅ | ❌ | ❌ |
+| 引用追溯 | ✅ | ✅ (即時) | 部分支持 | 部分支持 |
+| 無註冊使用 | ✅ | ✅ | ❌ | ❌ |
+| 開源透明 | ✅ | ✅ | ❌ | ❌ |
+| AI 引擎 | Gemini 2.5 | Gemini 2.5 | GPT-4/4o | Gemini Pro |oudflare Worker → Gemini streamGenerateContent API
+                     ↓ (串流處理)
+               Server-Sent Events → 前端即時顯示
+```mg.shields.io/badge/版本-v2.0-green) ![授權](https://img.shields.io/badge/授權-MIT-yellow)
 
 ## 🌟 產品特色
 
@@ -40,6 +57,12 @@
 - Grounding 支援即時引用來源
 - 增強的用戶體驗和互動感
 
+### Case D - 純答案串流版 🆕
+- 基於 Case C，但過濾思考內容
+- 使用語言檢測過濾英文思考過程
+- 只顯示中文回答內容
+- 提供純淨的答案體驗
+
 ## 🚀 立即體驗
 
 ### 方式一：在線使用（推薦）
@@ -47,6 +70,7 @@
 - **Case A**: [AI 問答系統 - 完整版](https://jasonliu0101.github.io/ms-thesis-llm-kit/case-a.html)
 - **Case B**: [AI 問答系統 - 精簡版](https://jasonliu0101.github.io/ms-thesis-llm-kit/case-b.html)
 - **Case C**: [AI 問答系統 - 串流版](https://jasonliu0101.github.io/ms-thesis-llm-kit/case-c.html) 🆕
+- **Case D**: [AI 問答系統 - 純答案串流版](https://jasonliu0101.github.io/ms-thesis-llm-kit/case-d.html) 🆕
 
 ### 方式二：本地部署
 ```bash
@@ -153,8 +177,9 @@ open http://localhost:8080
 ### 核心技術棧
 - **前端**: 原生 JavaScript (無框架依賴)
 - **後端**: Cloudflare Workers (Serverless)
-- **API**: Google Gemini 2.5 Flash
+- **AI 引擎**: Google Gemini 2.5 Flash
 - **串流**: Server-Sent Events (SSE)
+- **搜尋**: Gemini Grounding
 - **樣式**: 純 CSS3 (響應式設計)
 
 ## �🆚 產品對比

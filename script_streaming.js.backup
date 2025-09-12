@@ -41,55 +41,22 @@ class StreamingChatApp {
     }
 
     generateSessionCode(data) {
-        // 第一位：判斷是否來自例題或虛擬引用
+        // 第一位：判斷是否來自例題
         let digit1 = '0'; // 預設不是例題
         const currentQuestion = data.originalQuestion || '';
-        const currentPage = window.location.pathname.split('/').pop() || '';
         
-        // 檢查是否為 Case E 或 Case F 的虛擬引用情況
-        if ((currentPage === 'case-e.html' || currentPage === 'case-f.html') && data.references && data.references.length > 0) {
-            // 檢查是否有虛擬引用標記（透過明確的虛擬引用標記來判斷）
-            const hasVirtualReferences = data.references.some(ref => 
-                ref.virtual === true || 
-                ref.isVirtual === true || 
-                ref.type === 'virtual' ||
-                (ref.source && ref.source.includes('virtual')) ||
-                (ref.category && typeof ref.category === 'string') // 虛擬引用會有類別分類
-            );
-            
-            if (hasVirtualReferences && currentQuestion && this.selectedExampleQuestion) {
-                if (currentQuestion === this.selectedExampleQuestion) {
-                    const exampleQuestions = [
-                        "如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？",
-                        "鄰居的狗經常在夜間吠叫影響睡眠，我可以採取什麼法律行動？",
-                        "我在網路上購買商品但收到假貨，賣家拒絕退款怎麼辦？"
-                    ];
-                    
-                    for (let i = 0; i < exampleQuestions.length; i++) {
-                        if (currentQuestion === exampleQuestions[i]) {
-                            // Case E/F 虛擬引用情況下：第一題→4，第二題→5，第三題→6
-                            digit1 = (i + 4).toString();
-                            console.log(`🎯 [${currentPage === 'case-e.html' ? 'Case E' : 'Case F'}] 虛擬引用題目 ${i+1} 識別碼第一位設為: ${digit1}`);
-                            break;
-                        }
-                    }
-                }
-            }
-        } else {
-            // 一般情況：Case C/D 或沒有虛擬引用的 Case E/F
-            if (currentQuestion && this.selectedExampleQuestion) {
-                if (currentQuestion === this.selectedExampleQuestion) {
-                    const exampleQuestions = [
-                        "如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？",
-                        "鄰居的狗經常在夜間吠叫影響睡眠，我可以採取什麼法律行動？",
-                        "我在網路上購買商品但收到假貨，賣家拒絕退款怎麼辦？"
-                    ];
-                    
-                    for (let i = 0; i < exampleQuestions.length; i++) {
-                        if (currentQuestion === exampleQuestions[i]) {
-                            digit1 = (i + 1).toString();
-                            break;
-                        }
+        if (currentQuestion && this.selectedExampleQuestion) {
+            if (currentQuestion === this.selectedExampleQuestion) {
+                const exampleQuestions = [
+                    "如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？",
+                    "鄰居的狗經常在夜間吠叫影響睡眠，我可以採取什麼法律行動？",
+                    "我在網路上購買商品但收到假貨，賣家拒絕退款怎麼辦？"
+                ];
+                
+                for (let i = 0; i < exampleQuestions.length; i++) {
+                    if (currentQuestion === exampleQuestions[i]) {
+                        digit1 = (i + 1).toString();
+                        break;
                     }
                 }
             }
@@ -429,8 +396,8 @@ class StreamingChatApp {
                 
                 // 檢查是否應該顯示引用來源（≥10個才顯示）
                 if (collectedReferences.length >= 10) {
-                    console.log('✅ [Case D] 使用緊湊格式顯示引用區塊');
-                    this.displayEnhancedReferences(collectedReferences, responseDiv, 0); // 0 表示沒有虛擬引用
+                    this.createReferencesContainer(responseDiv, collectedReferences);
+                    console.log('✅ [Case D] 顯示引用區塊');
                 } else {
                     console.log('❌ [Case D] 引用來源數量 < 10，不顯示引用區塊，但已存儲數據供識別碼使用');
                 }
@@ -669,7 +636,7 @@ class StreamingChatApp {
                         await new Promise(resolve => setTimeout(resolve, 2000));
                     }
                 },
-                onThinkingEnd: async () => {
+                onThinkingEnd: () => {
                     console.log('🔚 思考階段結束，隱藏串流指示器');
                     const ind = responseDiv.querySelector('.streaming-indicator');
                     if (ind) ind.style.display = 'none';
@@ -677,7 +644,7 @@ class StreamingChatApp {
                     // 調用外部回調（如果提供）
                     if (onThinkingChunkEnd) {
                         console.log('🎯 調用思考 chunk 結束回調');
-                        await onThinkingChunkEnd();
+                        onThinkingChunkEnd();
                     }
                 },
                 // 忽略答案階段 - 答案內容將被隱藏
@@ -859,8 +826,8 @@ class StreamingChatApp {
                     
                     // 檢查是否應該顯示引用來源（≥10個才顯示）
                     if (references.length >= 10) {
-                        console.log('✅ [Case C] 使用緊湊格式顯示引用區塊');
-                        this.displayEnhancedReferences(references, responseDiv, 0); // 0 表示沒有虛擬引用
+                        this.createReferencesContainer(responseDiv, references);
+                        console.log('✅ [Case C] 顯示引用區塊');
                     } else {
                         console.log('❌ [Case C] 引用來源數量 < 10，不顯示引用區塊，但已存儲數據供識別碼使用');
                     }
@@ -1024,15 +991,15 @@ class StreamingChatApp {
                 console.log('⚠️ 未找到現有答案容器，創建新的');
                 answerContainer = this.createAnswerContainer(responseDiv);
                 this.showAnswerProcessing(answerContainer);
-                
-                // 模擬短暫處理時間以顯示loading狀態
-                await new Promise(resolve => setTimeout(resolve, 300));
-                
-                // 清除處理中狀態
-                this.clearAnswerProcessing(answerContainer);
             }
             
-            // 如果容器已存在，載入狀態應該已在調用前被清除
+            // 模擬短暫處理時間以顯示loading狀態（如果還在顯示處理中狀態）
+            if (answerContainer.querySelector('.processing-indicator')) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            // 清除處理中狀態
+            this.clearAnswerProcessing(answerContainer);
 
             // 顯示答案內容
             if (answerText) {
@@ -1056,28 +1023,21 @@ class StreamingChatApp {
                     if (references && references.length > 0) {
                         console.log('📚 [Case C] 顯示引用來源:', references.length, '個');
                         
-                        // 檢查是否已經有增強後的引用數據（Case E 虛擬引用增強）
-                        if (!responseDiv.dataset.references) {
-                            // 只有在沒有預先存儲的引用數據時才存儲原始引用
-                            responseDiv.dataset.references = JSON.stringify(references);
-                            console.log('💾 已存儲原始引用數據到responseDiv');
-                        } else {
-                            console.log('💾 已有增強後的引用數據，不覆蓋');
-                        }
+                        // 將引用數據存儲到responseDiv中，供後續識別碼使用
+                        responseDiv.dataset.references = JSON.stringify(references);
+                        console.log('💾 已存儲引用數據到responseDiv');
                         
                         // 檢查是否應該顯示引用來源（≥10個才顯示）
                         if (references.length >= 10) {
-                            console.log('✅ [Case C] 使用緊湊格式顯示引用區塊');
-                            this.displayEnhancedReferences(references, responseDiv, 0); // 0 表示沒有虛擬引用
+                            this.createReferencesContainer(responseDiv, references);
+                            console.log('✅ [Case C] 顯示引用區塊');
                         } else {
                             console.log('❌ [Case C] 引用來源數量 < 10，不顯示引用區塊，但已存儲數據供識別碼使用');
                         }
                     } else {
                         console.log('📚 [Case C] 沒有引用來源');
-                        // 只有在沒有預先存儲的引用數據時才存儲空數組
-                        if (!responseDiv.dataset.references) {
-                            responseDiv.dataset.references = JSON.stringify([]);
-                        }
+                        // 即使沒有引用來源，也存儲空數組
+                        responseDiv.dataset.references = JSON.stringify([]);
                     }
                 }
                 
@@ -1097,8 +1057,8 @@ class StreamingChatApp {
                 answerContainer.innerHTML = `<div class="error-message">顯示答案時發生錯誤: ${error.message}</div>`;
             }
             
-            // 即使發生錯誤，也要確保存儲引用數組，以便識別碼能正常顯示
-            if (responseDiv && !responseDiv.dataset.references) {
+            // 即使發生錯誤，也要確保存儲空的引用數組，以便識別碼能正常顯示
+            if (responseDiv) {
                 responseDiv.dataset.references = JSON.stringify([]);
                 console.log('💾 錯誤情況下存儲空引用數組');
             }
@@ -1107,6 +1067,80 @@ class StreamingChatApp {
         }
         
         // 返回responseDiv供後續識別碼顯示使用
+        return responseDiv;
+    }
+
+    // Case E 專用：顯示答案但不處理引用來源（引用交給虛擬增強系統處理）
+    async displayAnswerResultWithoutReferences(answerData, responseDiv) {
+        let answerContainer = null;
+        
+        try {
+            const { answerText, references, isFallback } = answerData;
+            
+            // 尋找已存在的答案容器
+            answerContainer = responseDiv.querySelector('.response-section .response-content');
+            
+            if (!answerContainer) {
+                console.log('⚠️ 未找到現有答案容器，創建新的');
+                answerContainer = this.createAnswerContainer(responseDiv);
+                this.showAnswerProcessing(answerContainer);
+            }
+
+            // 模擬短暫處理時間以顯示loading狀態
+            if (answerContainer.querySelector('.processing-indicator')) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+
+            // 清除處理中狀態
+            this.clearAnswerProcessing(answerContainer);
+
+            // 顯示答案內容（不處理引用）
+            if (answerText) {
+                if (isFallback) {
+                    console.log('📢 [Case E] 顯示備用答案（來自 answer_chunk）');
+                    const formattedAnswer = this.formatResponseChunk(answerText);
+                    answerContainer.innerHTML = formattedAnswer;
+                } else {
+                    // 正常答案流程：翻譯並顯示，但不顯示引用
+                    const translatedAnswer = await this.translateWithQueue(answerText);
+                    const cleanedAnswer = this.cleanCompleteText(translatedAnswer);
+                    const formattedAnswer = this.formatResponseChunk(cleanedAnswer);
+                    answerContainer.innerHTML = formattedAnswer;
+                    
+                    console.log('📚 [Case E] 答案已顯示，引用處理交給虛擬增強系統');
+                }
+                
+                // 存儲引用數據供虛擬增強系統使用
+                if (references && references.length > 0) {
+                    responseDiv.dataset.references = JSON.stringify(references);
+                    console.log('💾 [Case E] 已存儲原始引用數據到responseDiv，供虛擬增強使用');
+                } else {
+                    responseDiv.dataset.references = JSON.stringify([]);
+                }
+                
+                this.scrollToBottom();
+            } else {
+                console.warn('⚠️ 沒有找到答案文本');
+                answerContainer.innerHTML = '<div class="error-message">未能取得完整回應內容</div>';
+            }
+            
+        } catch (error) {
+            console.error('[Case E] 顯示答案結果錯誤:', error);
+            
+            if (answerContainer) {
+                this.clearAnswerProcessing(answerContainer);
+                answerContainer.innerHTML = `<div class="error-message">顯示答案時發生錯誤: ${error.message}</div>`;
+            }
+            
+            // 確保存儲空的引用數組
+            if (responseDiv) {
+                responseDiv.dataset.references = JSON.stringify([]);
+                console.log('💾 [Case E] 錯誤情況下存儲空引用數組');
+            }
+            
+            throw error;
+        }
+        
         return responseDiv;
     }
 
@@ -1387,19 +1421,15 @@ class StreamingChatApp {
                 <p class="reference-count">共 ${references.length} 個來源</p>
             </div>
             <div class="references-list">
-                ${references.map((ref, index) => {
-                    const refData = ref.web || ref; // 兼容不同的數據格式
-                    return `
-                        <div class="reference-item compact" id="ref-${index + 1}">
-                            <div class="reference-number">${index + 1}</div>
-                            <div class="reference-details">
-                                <a href="${refData.uri || refData.url}" target="_blank" rel="noopener noreferrer" class="reference-title">
-                                    ${refData.title}
-                                </a>
-                            </div>
+                ${references.map((ref, index) => `
+                    <div class="reference-item">
+                        <div class="reference-number">${index + 1}</div>
+                        <div class="reference-content">
+                            <h4><a href="${ref.web.uri}" target="_blank" rel="noopener noreferrer">${ref.web.title}</a></h4>
+                            <p class="reference-url">${ref.web.uri}</p>
                         </div>
-                    `;
-                }).join('')}
+                    </div>
+                `).join('')}
             </div>
         `;
 
@@ -1448,72 +1478,7 @@ class StreamingChatApp {
             let thinkingEnded = false;
             let answerDisplayed = false;
             let collectedReferences = [];
-            let virtualReferencesReady = false;
-            let enhancedReferences = null;
             
-            // 先啟動虛擬引用增強請求（不等待結果，但追蹤狀態）
-            const virtualEnhancementPromise = (async () => {
-                try {
-                    // 檢測問題類型並獲取虛擬引用
-                    const questionCategory = this.detectQuestionCategory(question);
-                    if (questionCategory) {
-                        console.log(`🎯 [Case E] 檢測到問題類型: ${questionCategory}，開始預先獲取虛擬引用...`);
-                        const virtualData = await this.fetchVirtualReferences(questionCategory);
-                        if (virtualData && virtualData.references && virtualData.references.length > 0) {
-                            console.log('✅ [Case E] 虛擬引用數據已準備就緒');
-                            virtualReferencesReady = true;
-                            
-                            // 虛擬引用準備好後檢查是否可以顯示
-                            console.log('🎯 [Case E] 虛擬引用已準備，檢查是否可以顯示');
-                            checkAndDisplayAnswerWhenReady();
-                            
-                            return virtualData;
-                        }
-                    }
-                    virtualReferencesReady = true; // 即使沒有虛擬引用也標記為準備就緒
-                    return null;
-                } catch (error) {
-                    console.warn('⚠️ [Case E] 虛擬引用獲取失敗，但繼續處理:', error);
-                    virtualReferencesReady = true;
-                    return null;
-                }
-            })();
-
-            // 共用的檢查和顯示函數
-            const checkAndDisplayAnswerWhenReady = async () => {
-                // 檢查翻譯隊列是否清空
-                const currentTime = Date.now();
-                const queueWaitTime = Math.max(0, this.nextTranslationTime - currentTime);
-                const queueIsEmpty = queueWaitTime <= 0;
-                
-                console.log('🔍 [Case E] 檢查顯示條件:', {
-                    virtualReferencesReady,
-                    answerDataReady: !!answerData,
-                    queueIsEmpty,
-                    answerDisplayed,
-                    queueWaitTime
-                });
-                
-                // 所有條件滿足：虛擬引用準備好 + 答案數據準備好 + 翻譯隊列清空 + 還沒顯示答案
-                if (virtualReferencesReady && answerData && queueIsEmpty && !answerDisplayed) {
-                    console.log('🚀 [Case E] 所有條件滿足，立即顯示答案和識別碼');
-                    
-                    // 處理虛擬引用增強
-                    const virtualData = await virtualEnhancementPromise;
-                    enhancedReferences = await this.enhanceWithVirtualReferencesSync(question, collectedReferences, virtualData, responseDiv);
-                    
-                    // 立即顯示答案
-                    await this.displayAnswerResult(responseDiv, answerData, question);
-                    answerDisplayed = true;
-                    
-                    // [Case E] 與引用來源同時顯示識別碼
-                    this.showFinalSessionCodeWithReferences(responseDiv, question, enhancedReferences);
-                    return true; // 表示已經顯示
-                }
-                
-                return false; // 表示條件不滿足，未顯示
-            };
-
             // 併發執行兩個階段的請求
             const answerPromise = this.processAnswerPhaseBackground(question, responseDiv)
                 .then(data => {
@@ -1521,103 +1486,36 @@ class StreamingChatApp {
                     if (data && data.references) {
                         collectedReferences = data.references;
                     }
-                    
-                    // 答案數據獲取後檢查是否可以顯示
-                    console.log('🎯 [Case E] 答案數據已獲取，檢查是否可以顯示');
-                    checkAndDisplayAnswerWhenReady();
                 });
 
-            const thinkingPromise = this.processThinkingPhase(question, responseDiv, async () => {
-                // thinking end 回調：等待翻譯隊列清空後檢查是否可以開始顯示答案
-                console.log('🎯 [Case E] thinking end 收到，檢查翻譯隊列狀態...');
-                
-                // 計算翻譯隊列還需要多長時間清空
-                const currentTime = Date.now();
-                const queueWaitTime = Math.max(0, this.nextTranslationTime - currentTime);
-                
-                if (queueWaitTime > 0) {
-                    console.log(`⏳ [Case E] 翻譯隊列還需等待 ${queueWaitTime}ms，等待清空後檢查顯示條件`);
-                    await new Promise(resolve => setTimeout(resolve, queueWaitTime));
-                }
-                
-                console.log('✅ [Case E] 翻譯隊列已清空，檢查虛擬引用和答案狀態');
-                
-                // 檢查是否可以開始顯示答案
-                const displayed = await checkAndDisplayAnswerWhenReady();
-                
-                // 如果還沒顯示，說明條件不滿足，顯示載入狀態
-                if (!displayed) {
-                    console.log('⏳ [Case E] 條件尚未滿足，顯示載入狀態');
-                    const answerContainer = this.createAnswerContainer(responseDiv);
-                    this.showAnswerProcessing(answerContainer);
-                }
-            })
+            const thinkingPromise = this.processThinkingPhase(question, responseDiv)
                 .then(() => {
                     thinkingEnded = true;
                 });
 
+            // 顯示處理狀態
+            this.showAnswerProcessing(responseDiv);
+
             // 等待思考階段完成
             await thinkingPromise;
             console.log('✅ Case E 思考階段完成');
-            
-            // 如果答案還沒顯示，等待必要條件滿足後顯示
-            if (!answerDisplayed) {
-                console.log('⏳ [Case E] 思考階段完成但答案尚未顯示，等待條件滿足...');
-                
-                // 等待虛擬引用和答案數據都準備好
-                await Promise.all([virtualEnhancementPromise, answerPromise]);
-                
-                if (answerData && !answerDisplayed) {
-                    // 處理虛擬引用增強（如果還沒處理）
-                    if (!enhancedReferences) {
-                        const virtualData = await virtualEnhancementPromise;
-                        enhancedReferences = await this.enhanceWithVirtualReferencesSync(question, collectedReferences, virtualData, responseDiv);
-                        
-                        // [Case E] 與引用來源同時顯示識別碼
-                        this.showFinalSessionCodeWithReferences(responseDiv, question, enhancedReferences);
-                    }
-                    
-                    console.log('🚀 [Case E] 最終條件滿足，顯示答案');
-                    await this.displayAnswerResult(responseDiv, answerData, question);
-                    answerDisplayed = true;
-                } else if (!answerData) {
-                    // 重新獲取答案容器以顯示錯誤
-                    const answerContainer = responseDiv.querySelector('.response-section .response-content');
-                    if (answerContainer) {
-                        answerContainer.innerHTML = '<div class="error-message">未能獲取回答內容</div>';
-                    }
-                }
-            }
 
-            // 等待答案階段完成（確保所有背景處理完成）
+            // 等待答案階段完成
             await answerPromise;
             console.log('✅ Case E 答案階段完成');
 
-            // 如果還沒有增強引用，現在處理（用於識別碼生成）
-            if (!enhancedReferences) {
-                const virtualData = await virtualEnhancementPromise;
-                enhancedReferences = await this.enhanceWithVirtualReferencesSync(question, collectedReferences, virtualData, responseDiv);
-                
-                // [Case E] 與引用來源同時顯示識別碼
-                this.showFinalSessionCodeWithReferences(responseDiv, question, enhancedReferences);
+            // 顯示答案（如果尚未顯示）
+            if (answerData && !answerDisplayed) {
+                // Case E 特殊處理：不在這裡顯示引用，只顯示答案內容
+                await this.displayAnswerResultWithoutReferences(answerData, responseDiv);
+                answerDisplayed = true;
             }
-            
-            // 存儲思考數據到 responseDiv，供識別碼生成使用
-            responseDiv.dataset.thinking = JSON.stringify(true); // Case E 有思考過程
-            
-            // 存儲增強後的引用數據到 responseDiv，供識別碼生成使用
-            const finalReferences = enhancedReferences || collectedReferences || [];
-            responseDiv.dataset.references = JSON.stringify(finalReferences);
-            console.log('💾 [Case E] 存儲增強後的引用數據到responseDiv，數量:', finalReferences.length);
-            
-            // 在清除載入狀態
-            const loadingContainer = responseDiv.querySelector('.response-section .response-content');
-            if (loadingContainer) {
-                console.log('🧹 [Case E] 清除載入狀態');
-                this.clearAnswerProcessing(loadingContainer);
-            }
-            
-            // 識別碼已經與引用來源同時顯示，無需再次顯示
+
+            // 檢查是否需要虛擬引用增強
+            await this.enhanceWithVirtualReferences(question, collectedReferences, responseDiv);
+
+            // [Case E] 顯示識別碼（在引用來源之後）
+            this.showFinalSessionCode(responseDiv, question);
 
         } catch (error) {
             console.error('❌ Case E 串流處理發生錯誤:', error);
@@ -1694,7 +1592,14 @@ class StreamingChatApp {
                         try {
                             const payload = JSON.parse(dataStr);
                             
-                            // [Case D] 收集引用數據
+                            // [Case F] 處理 grounding 類型的引用數據
+                            if (payload.type === 'grounding' && payload.references && Array.isArray(payload.references)) {
+                                collectedReferences = payload.references;
+                                console.log('📚 [Case F] 收集到 grounding 引用數據:', collectedReferences.length, '個');
+                                continue; // 處理完引用後跳過，不顯示內容
+                            }
+                            
+                            // [Case F] 收集引用數據（保持原有邏輯兼容性）
                             if (payload.references && Array.isArray(payload.references)) {
                                 collectedReferences = payload.references;
                                 console.log('📚 [Case F] 收集到引用數據:', collectedReferences.length);
@@ -1720,50 +1625,10 @@ class StreamingChatApp {
                             }
 
                             if (content && content.trim()) {
-                                // 調試：記錄收到的內容
-                                if (content.includes('參考資料') || content.includes('引用來源')) {
-                                    console.log('🔍 [Case F Debug] 發現包含參考標記的內容:', JSON.stringify(content.substring(0, 200)));
-                                }
-                                
-                                // 檢查是否包含參考來源標記，如果有混合內容則先分離
+                                // 檢查是否包含參考來源標記
                                 if (!referenceSectionDetected && this.containsReferenceKeywords(content)) {
-                                    console.log('✅ [Case F Debug] containsReferenceKeywords 返回 true');
-                                    
-                                    // 分離混合內容
-                                    const { beforeReference, hasReference } = this.separateMixedContent(content);
-                                    
-                                    // 如果有參考資料前的有效內容，先顯示它
-                                    if (beforeReference && beforeReference.trim()) {
-                                        console.log('📝 [Case F] 發現混合內容，先顯示參考資料前的內容');
-                                        
-                                        // 語言檢測：只顯示非英文內容
-                                        const isEnglish = await this.isEnglishContent(beforeReference);
-                                        
-                                        if (!isEnglish) {
-                                            // [Case F] 第一次顯示內容時清除 Loading 狀態
-                                            if (!hasDisplayedContent) {
-                                                answerContainer.innerHTML = ''; // 清除 Loading 狀態
-                                                hasDisplayedContent = true;
-                                                console.log('🧹 [Case F] 清除 Loading 狀態，開始顯示內容');
-                                            }
-                                            
-                                            // 直接顯示參考資料前的內容
-                                            const formattedContent = this.formatResponseChunk(beforeReference);
-                                            answerContainer.innerHTML += formattedContent;
-                                            this.scrollToBottom();
-                                            
-                                            answerBuffer += beforeReference;
-                                        }
-                                    }
-                                    
-                                    // 設置參考來源區塊檢測標記
                                     console.log('🚫 [Case F] 偵測到參考來源區塊，停止顯示後續內容');
                                     referenceSectionDetected = true;
-                                    
-                                    // 立即顯示來源處理載入提示
-                                    console.log('🔄 [Case F] 偵測到引用來源，顯示載入提示');
-                                    this.showSourceProcessingLoader(responseDiv);
-                                    
                                     continue;
                                 }
                                 
@@ -1809,47 +1674,24 @@ class StreamingChatApp {
             
             console.log('✅ Case F 串流處理完成');
             
-            // 如果還沒有顯示過載入提示（沒有偵測到引用來源），現在顯示
-            const existingLoader = responseDiv.querySelector('.source-processing-loader');
-            if (!existingLoader) {
-                console.log('🔄 [Case F] 補充顯示來源處理載入提示（未偵測到引用來源情況）');
-                this.showSourceProcessingLoader(responseDiv);
-            }
-            
-            // 檢查是否需要虛擬引用增強（僅獲取數據，不顯示）
-            const finalReferences = await this.enhanceWithVirtualReferencesDataOnly(question, collectedReferences);
-            
-            // 移除載入提示
-            this.removeSourceProcessingLoader(responseDiv);
-            
-            // 存儲引用數據到 responseDiv，供識別碼生成使用（參照 Case D）
-            // 使用增強後的引用數據（如果有的話）
-            const referencesForId = finalReferences || collectedReferences;
-            responseDiv.dataset.references = JSON.stringify(referencesForId);
+            // [Case F] 存儲數據供識別碼使用（比照 Case D）
             responseDiv.dataset.thinking = JSON.stringify(null); // Case F 沒有思考過程
-            
-            if (referencesForId.length > 0) {
+            if (collectedReferences && collectedReferences.length > 0) {
+                responseDiv.dataset.references = JSON.stringify(collectedReferences);
                 console.log('💾 [Case F] 已存儲引用數據到responseDiv');
             } else {
                 console.log('📚 [Case F] 沒有引用來源');
-                // 即使沒有引用來源，也存儲空數組
                 responseDiv.dataset.references = JSON.stringify([]);
             }
             
-            // 先顯示識別碼（參照 Case D）
-            this.showFinalSessionCode(responseDiv, question);
+            // 檢查是否需要虛擬引用增強
+            await this.enhanceWithVirtualReferences(question, collectedReferences, responseDiv);
             
-            // 然後顯示引用來源
-            if (referencesForId && referencesForId.length > 0) {
-                const virtualCount = (finalReferences && collectedReferences) ? finalReferences.length - collectedReferences.length : 0;
-                this.displayEnhancedReferences(referencesForId, responseDiv, virtualCount);
-            }
+            // [Case F] 顯示識別碼（在引用來源之後）
+            this.showFinalSessionCode(responseDiv, question);
 
         } catch (error) {
             console.error('❌ Case F 串流處理發生錯誤:', error);
-            
-            // 確保移除載入提示
-            this.removeSourceProcessingLoader(responseDiv);
             
             const answerContainer = responseDiv.querySelector('.answer-section');
             if (answerContainer) {
@@ -1872,14 +1714,14 @@ class StreamingChatApp {
             
             if (!needsVirtualReferences) {
                 console.log('✅ 現有引用數據充足，無需虛擬引用增強');
-                return existingReferences; // 返回原始引用數據
+                return;
             }
 
             // 檢測問題類型
             const questionCategory = this.detectQuestionCategory(question);
             if (!questionCategory) {
                 console.log('ℹ️ 無法檢測問題類型，不進行虛擬引用增強');
-                return existingReferences; // 返回原始引用數據
+                return;
             }
 
             console.log(`🎯 檢測到問題類型: ${questionCategory}，開始虛擬引用增強...`);
@@ -1888,7 +1730,7 @@ class StreamingChatApp {
             const virtualData = await this.fetchVirtualReferences(questionCategory);
             if (!virtualData || !virtualData.references || virtualData.references.length === 0) {
                 console.warn('⚠️ 無法獲取虛擬引用數據');
-                return existingReferences; // 返回原始引用數據
+                return;
             }
 
             // 計算需要補充的引用數量
@@ -1899,16 +1741,12 @@ class StreamingChatApp {
             // 選擇虛擬引用
             const selectedVirtualReferences = virtualData.references.slice(0, needCount);
             
-            // 轉換為標準格式並添加虛擬引用標記
+            // 轉換為標準格式
             const formattedReferences = selectedVirtualReferences.map(ref => ({
                 web: {
                     title: ref.title,
                     uri: ref.uri
-                },
-                virtual: true,        // 明確標記為虛擬引用
-                isVirtual: true,      // 備用標記
-                type: 'virtual',      // 類型標記
-                category: questionCategory  // 類別標記
+                }
             }));
 
             // 合併現有引用和虛擬引用
@@ -1921,137 +1759,9 @@ class StreamingChatApp {
 
             // 顯示增強後的引用
             this.displayEnhancedReferences(enhancedReferences, responseDiv, selectedVirtualReferences.length);
-            
-            // 返回增強後的引用數據供識別碼生成使用
-            return enhancedReferences;
 
         } catch (error) {
             console.error('❌ 虛擬引用增強失敗:', error);
-            return existingReferences; // 發生錯誤時返回原始引用數據
-        }
-    }
-
-    // 新增：僅處理虛擬引用數據而不顯示（用於 Case F 調整順序）
-    async enhanceWithVirtualReferencesDataOnly(question, existingReferences) {
-        try {
-            console.log(`🔍 [數據處理] 檢查是否需要虛擬引用增強，現有引用數量: ${existingReferences ? existingReferences.length : 0}`);
-            
-            // 檢查是否需要虛擬引用（引用數據小於10）
-            const needsVirtualReferences = !existingReferences || existingReferences.length < 10;
-            
-            if (!needsVirtualReferences) {
-                console.log('✅ [數據處理] 現有引用數據充足，無需虛擬引用增強');
-                return existingReferences; // 返回原始引用數據
-            }
-
-            // 檢測問題類型
-            const questionCategory = this.detectQuestionCategory(question);
-            if (!questionCategory) {
-                console.log('ℹ️ [數據處理] 無法檢測問題類型，不進行虛擬引用增強');
-                return existingReferences; // 返回原始引用數據
-            }
-
-            console.log(`🎯 [數據處理] 檢測到問題類型: ${questionCategory}，開始虛擬引用增強...`);
-
-            // 獲取虛擬引用數據
-            const virtualData = await this.fetchVirtualReferences(questionCategory);
-            if (!virtualData || !virtualData.references || virtualData.references.length === 0) {
-                console.warn('⚠️ [數據處理] 無法獲取虛擬引用數據');
-                return existingReferences; // 返回原始引用數據
-            }
-
-            // 計算需要補充的引用數量
-            const currentCount = existingReferences ? existingReferences.length : 0;
-            const targetCount = 10;
-            const needCount = Math.max(0, targetCount - currentCount);
-            
-            // 選擇虛擬引用
-            const selectedVirtualReferences = virtualData.references.slice(0, needCount);
-            
-            // 轉換為標準格式並添加虛擬引用標記
-            const formattedReferences = selectedVirtualReferences.map(ref => ({
-                web: {
-                    title: ref.title,
-                    uri: ref.uri
-                },
-                virtual: true,        // 明確標記為虛擬引用
-                isVirtual: true,      // 備用標記
-                type: 'virtual',      // 類型標記
-                category: questionCategory  // 類別標記
-            }));
-
-            // 合併現有引用和虛擬引用
-            const enhancedReferences = [
-                ...(existingReferences || []),
-                ...formattedReferences
-            ];
-
-            console.log(`✅ [數據處理] 虛擬引用增強完成：原有 ${currentCount} 個，新增 ${selectedVirtualReferences.length} 個虛擬引用`);
-            
-            // 只返回數據，不顯示
-            return enhancedReferences;
-
-        } catch (error) {
-            console.error('❌ [數據處理] 虛擬引用增強失敗:', error);
-            return existingReferences; // 發生錯誤時返回原始引用數據
-        }
-    }
-
-    // 新增：使用預取的虛擬引用數據進行同步增強（用於 Case E 優化）
-    async enhanceWithVirtualReferencesSync(question, existingReferences, virtualData, responseDiv) {
-        try {
-            console.log(`🔍 [同步增強] 檢查是否需要虛擬引用增強，現有引用數量: ${existingReferences ? existingReferences.length : 0}`);
-            
-            // 檢查是否需要虛擬引用（引用數據小於10）
-            const needsVirtualReferences = !existingReferences || existingReferences.length < 10;
-            
-            if (!needsVirtualReferences) {
-                console.log('✅ [同步增強] 現有引用數據充足，無需虛擬引用增強');
-                return existingReferences; // 返回原始引用數據
-            }
-
-            if (!virtualData || !virtualData.references || virtualData.references.length === 0) {
-                console.log('ℹ️ [同步增強] 沒有虛擬引用數據，返回原始引用');
-                return existingReferences; // 返回原始引用數據
-            }
-
-            // 計算需要補充的引用數量
-            const currentCount = existingReferences ? existingReferences.length : 0;
-            const targetCount = 10;
-            const needCount = Math.max(0, targetCount - currentCount);
-            
-            // 選擇虛擬引用
-            const selectedVirtualReferences = virtualData.references.slice(0, needCount);
-            
-            // 轉換為標準格式並添加虛擬引用標記
-            const formattedReferences = selectedVirtualReferences.map(ref => ({
-                web: {
-                    title: ref.title,
-                    uri: ref.uri
-                },
-                virtual: true,        // 明確標記為虛擬引用
-                isVirtual: true,      // 備用標記
-                type: 'virtual',      // 類型標記
-                category: virtualData.category  // 類別標記
-            }));
-
-            // 合併現有引用和虛擬引用
-            const enhancedReferences = [
-                ...(existingReferences || []),
-                ...formattedReferences
-            ];
-
-            console.log(`✅ [同步增強] 虛擬引用增強完成：原有 ${currentCount} 個，新增 ${selectedVirtualReferences.length} 個虛擬引用`);
-
-            // 顯示增強後的引用
-            this.displayEnhancedReferences(enhancedReferences, responseDiv, selectedVirtualReferences.length);
-            
-            // 返回增強後的引用數據供識別碼生成使用
-            return enhancedReferences;
-
-        } catch (error) {
-            console.error('❌ [同步增強] 虛擬引用增強失敗:', error);
-            return existingReferences; // 發生錯誤時返回原始引用數據
         }
     }
 
@@ -2232,7 +1942,6 @@ class StreamingChatApp {
         return answerDiv.querySelector('.response-content');
     }
 
-    // 舊版引用容器創建函數（大型藍色格式）- 已棄用，改用 displayEnhancedReferences
     createReferencesContainer(responseDiv, references) {
         const messageContent = responseDiv.querySelector('.message-content');
         
@@ -2407,11 +2116,66 @@ class StreamingChatApp {
 
     // 確保識別碼在回答區之後（答案、引用來源之後）
     ensureSessionCodeBelowAnswer(messageContent, sessionDiv) {
-        console.log('🔧 [Case C] ensureSessionCodeBelowAnswer 開始');
+        console.log('🔧 [Case C/E/F] ensureSessionCodeBelowAnswer 開始');
         
         const place = () => {
-            const references = messageContent.querySelector('.references-section');
-            const response = messageContent.querySelector('.response-section');
+            // 檢查當前頁面類型
+            const currentPath = window.location.pathname;
+            const isCaseF = currentPath.includes('case-f.html');
+            
+            if (isCaseF) {
+                // Case F 特殊處理：識別碼要在整個對話的最下面
+                console.log('🎯 [Case F] 將識別碼放置在對話最下方');
+                
+                // 先移除舊的識別碼
+                messageContent.querySelectorAll('.session-code-section, .session-id-display')
+                    .forEach(n => {
+                        if (n !== sessionDiv) {
+                            n.remove();
+                            console.log('🗑️ 移除舊識別碼');
+                        }
+                    });
+                
+                // 直接附加到 messageContent 的最後
+                messageContent.appendChild(sessionDiv);
+                console.log('✅ [Case F] 識別碼已放置在對話最下方');
+                return true;
+            } else {
+                // Case C/E 的原邏輯：優先尋找引用區段，然後尋找回答區段
+                const references = messageContent.querySelector('.references-section');
+                const response = messageContent.querySelector('.response-section, .answer-section, .answer-content');
+                
+                // 如果有引用區段，放在引用區段後面
+                const anchor = references || response;
+
+                // 先移除舊的識別碼（支援兩種不同的 CSS 類名）
+                messageContent.querySelectorAll('.session-code-section, .session-id-display')
+                    .forEach(n => {
+                        if (n !== sessionDiv) { // 避免移除要插入的元素
+                            n.remove();
+                            console.log('🗑️ 移除舊識別碼');
+                        }
+                    });
+
+                if (anchor && anchor.nextSibling) {
+                    anchor.parentNode.insertBefore(sessionDiv, anchor.nextSibling);
+                    console.log('✅ 識別碼已插入到', anchor.className, '之後');
+                    return true;
+                } else if (anchor) {
+                    anchor.parentNode.appendChild(sessionDiv);
+                    console.log('✅ 識別碼已附加到', anchor.className, '之後');
+                    return true;
+                } else {
+                    // 回答區還沒生出來，先暫緩
+                    console.log('⏳ 回答區尚未生成，等待中...');
+                    return false;
+                }
+            }
+        };
+
+        if (place()) return; // 已經放好
+            
+            // 如果有引用區段，放在引用區段後面
             const anchor = references || response;
 
             // 先移除舊的識別碼（支援兩種不同的 CSS 類名）
@@ -2449,7 +2213,7 @@ class StreamingChatApp {
                 console.log('✅ MutationObserver 已完成任務');
             }
         });
-        mo.observe(messageContent, { childList: true, subtree: false });
+        mo.observe(messageContent, { childList: true, subtree: true }); // 增加 subtree: true 來監聽子元素變化
     }
 
     // 最終階段：顯示識別碼（在所有內容處理完成後）
@@ -2541,34 +2305,6 @@ class StreamingChatApp {
         } catch (error) {
             console.error('❌ displaySessionCodeWhenReady 錯誤:', error);
             console.error('❌ 錯誤堆棧:', error.stack);
-        }
-    }
-
-    // 新增：Case E 專用 - 與引用來源同時顯示識別碼
-    showFinalSessionCodeWithReferences(responseDiv, question, enhancedReferences) {
-        try {
-            console.log('🎯 [Case E] 與引用來源同時顯示識別碼');
-            
-            // 存儲思考數據到 responseDiv，供識別碼生成使用
-            responseDiv.dataset.thinking = JSON.stringify(true); // Case E 有思考過程
-            
-            // 存儲增強後的引用數據到 responseDiv，供識別碼生成使用
-            const finalReferences = enhancedReferences || [];
-            responseDiv.dataset.references = JSON.stringify(finalReferences);
-            console.log('💾 [Case E] 存儲增強後的引用數據到responseDiv，數量:', finalReferences.length);
-            
-            // 清除載入狀態
-            const loadingContainer = responseDiv.querySelector('.response-section .response-content');
-            if (loadingContainer) {
-                console.log('🧹 [Case E] 清除載入狀態');
-                this.clearAnswerProcessing(loadingContainer);
-            }
-            
-            // 直接顯示識別碼，不需要延遲
-            this.displaySessionCodeWhenReady(responseDiv, question);
-            
-        } catch (error) {
-            console.error('❌ [Case E] 與引用來源同時顯示識別碼時發生錯誤:', error);
         }
     }
 
@@ -2677,52 +2413,6 @@ class StreamingChatApp {
         const processingIndicator = container.querySelector('.processing-indicator');
         if (processingIndicator) {
             processingIndicator.remove();
-        }
-    }
-
-    // 新增：顯示來源處理載入提示
-    showSourceProcessingLoader(responseDiv) {
-        console.log('🔧 [Debug] showSourceProcessingLoader 被調用，responseDiv:', !!responseDiv);
-        
-        if (!responseDiv) {
-            console.error('❌ [Debug] responseDiv 為空，無法顯示載入提示');
-            return;
-        }
-        
-        // 移除現有的來源載入提示
-        this.removeSourceProcessingLoader(responseDiv);
-        
-        // 創建來源處理載入提示
-        const sourceLoader = document.createElement('div');
-        sourceLoader.className = 'source-processing-loader';
-        sourceLoader.innerHTML = `
-            <div class="source-processing-indicator">
-                <div class="source-processing-spinner">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </div>
-                <span class="source-processing-text">正在整理引用來源...</span>
-            </div>
-        `;
-        
-        // 添加到回應容器的末尾
-        const messageContent = responseDiv.querySelector('.message-content') || responseDiv;
-        console.log('🔧 [Debug] messageContent 找到:', !!messageContent);
-        
-        messageContent.appendChild(sourceLoader);
-        
-        console.log('✅ [Debug] 載入提示已添加到 DOM');
-        console.log('🔄 [Case F] 已顯示來源處理載入提示');
-        this.scrollToBottom();
-    }
-
-    // 新增：移除來源處理載入提示
-    removeSourceProcessingLoader(responseDiv) {
-        if (!responseDiv) return;
-        
-        const sourceLoader = responseDiv.querySelector('.source-processing-loader');
-        if (sourceLoader) {
-            sourceLoader.remove();
-            console.log('✅ [Case F] 已移除來源處理載入提示');
         }
     }
 
@@ -3064,8 +2754,8 @@ class StreamingChatApp {
             // 顯示引用來源（採用 Case A 的邏輯：≥10 才顯示）
             if (result.references && result.references.length >= 10) {
                 console.log('📚 [Case C] 顯示引用來源:', result.references.length, '個');
-                console.log('✅ [Case C] 使用緊湊格式顯示引用區塊');
-                this.displayEnhancedReferences(result.references, responseDiv, 0); // 0 表示沒有虛擬引用
+                this.createReferencesContainer(responseDiv, result.references);
+                console.log('✅ [Case C] 顯示引用區塊');
             } else {
                 const count = result.references?.length || 0;
                 console.log(`❌ [Case C] 引用來源數量 ${count} < 10，隱藏引用區塊`);
@@ -3149,11 +2839,6 @@ class StreamingChatApp {
     containsReferenceKeywords(text) {
         if (!text) return false;
         
-        // 調試：記錄檢查的文本
-        if (text.includes('參考資料') || text.includes('引用來源')) {
-            console.log('🔍 [Debug] containsReferenceKeywords 檢查文本:', JSON.stringify(text.substring(0, 300)));
-        }
-        
         // 檢查各種參考來源標記模式
         const referencePatterns = [
             /參考資料[：:]/,
@@ -3168,68 +2853,7 @@ class StreamingChatApp {
             /\*\*引用資料[：:]\*\*/
         ];
         
-        const matched = referencePatterns.some(pattern => {
-            const result = pattern.test(text);
-            if (result) {
-                console.log('✅ [Debug] 匹配到模式:', pattern, '在文本中');
-            }
-            return result;
-        });
-        
-        if (!matched && (text.includes('參考資料') || text.includes('引用來源'))) {
-            console.log('⚠️ [Debug] 包含關鍵字但未匹配到模式');
-        }
-        
-        return matched;
-    }
-
-    // 新增：分離混合內容，提取參考資料前的有效內容
-    separateMixedContent(text) {
-        if (!text) return { beforeReference: '', hasReference: false };
-        
-        // 定義參考資料標記模式
-        const referencePatterns = [
-            /^([\s\S]*?)(\n.*?\*\*參考資料[：:]\*\*[\s\S]*)$/,
-            /^([\s\S]*?)(\n.*?參考資料[：:][\s\S]*)$/,
-            /^([\s\S]*?)(\n.*?\*\*引用來源[：:]\*\*[\s\S]*)$/,
-            /^([\s\S]*?)(\n.*?引用來源[：:][\s\S]*)$/,
-            /^([\s\S]*?)(\n.*?\*\*參考來源[：:]\*\*[\s\S]*)$/,
-            /^([\s\S]*?)(\n.*?參考來源[：:][\s\S]*)$/,
-            /^([\s\S]*?)(\n.*?引用資料[：:][\s\S]*)$/,
-            /^([\s\S]*?)(\*\*參考資料[：:]\*\*[\s\S]*)$/,
-            /^([\s\S]*?)(參考資料[：:][\s\S]*)$/,
-            /^([\s\S]*?)(\*\*引用來源[：:]\*\*[\s\S]*)$/,
-            /^([\s\S]*?)(引用來源[：:][\s\S]*)$/,
-            /^([\s\S]*?)(\*\*參考來源[：:]\*\*[\s\S]*)$/,
-            /^([\s\S]*?)(參考來源[：:][\s\S]*)$/,
-            /^([\s\S]*?)(引用資料[：:][\s\S]*)$/
-        ];
-        
-        // 嘗試匹配並分離內容
-        for (const pattern of referencePatterns) {
-            const match = text.match(pattern);
-            if (match) {
-                const beforeReference = match[1].trim();
-                return {
-                    beforeReference: beforeReference,
-                    hasReference: true
-                };
-            }
-        }
-        
-        // 如果沒有找到參考資料標記，檢查是否整個文本都是參考資料
-        if (this.containsReferenceKeywords(text)) {
-            return {
-                beforeReference: '',
-                hasReference: true
-            };
-        }
-        
-        // 沒有參考資料標記
-        return {
-            beforeReference: text,
-            hasReference: false
-        };
+        return referencePatterns.some(pattern => pattern.test(text));
     }
 
     cleanReferenceListFromText(text) {
@@ -3423,19 +3047,17 @@ class StreamingChatApp {
     formatStandardReferences(references) {
         if (!references || references.length === 0) return '';
         
-        return references.map((ref, index) => {
-            const refData = ref.web || ref; // 兼容不同的數據格式
-            return `
-                <div class="reference-item compact" id="ref-${index + 1}">
-                    <div class="reference-number">${index + 1}</div>
-                    <div class="reference-details">
-                        <a href="${refData.uri || refData.url}" target="_blank" rel="noopener noreferrer" class="reference-title">
-                            ${this.escapeHtml(refData.title)}
-                        </a>
-                    </div>
+        return references.map((ref, index) => `
+            <div class="reference-item">
+                <div class="reference-number">${index + 1}</div>
+                <div class="reference-details">
+                    <a href="${ref.url || ref.uri}" target="_blank" rel="noopener noreferrer" class="reference-title">
+                        ${this.escapeHtml(ref.title)}
+                    </a>
+                    <div class="reference-domain">${this.extractDomain(ref.url || ref.uri)}</div>
                 </div>
-            `;
-        }).join('');
+            </div>
+        `).join('');
     }
 
     formatLargeReferenceSet(references) {
@@ -3448,20 +3070,17 @@ class StreamingChatApp {
                 <p>以下是完整的引用來源列表：</p>
             </div>
             <div class="large-reference-list">
-                ${references.map((ref, index) => {
-                    const refData = ref.web || ref; // 兼容不同的數據格式
-                    const title = refData.title || 'Untitled';
-                    return `
-                        <div class="reference-item compact">
-                            <div class="reference-number">${index + 1}</div>
-                            <div class="reference-details">
-                                <a href="${refData.uri || refData.url}" target="_blank" rel="noopener noreferrer" title="${this.escapeHtml(title)}">
-                                    ${this.escapeHtml(title.length > 80 ? title.substring(0, 77) + '...' : title)}
-                                </a>
-                            </div>
+                ${references.map((ref, index) => `
+                    <div class="reference-item compact">
+                        <div class="reference-number">${index + 1}</div>
+                        <div class="reference-details">
+                            <a href="${ref.url || ref.uri}" target="_blank" rel="noopener noreferrer" title="${this.escapeHtml(ref.title)}">
+                                ${this.escapeHtml(ref.title.length > 80 ? ref.title.substring(0, 77) + '...' : ref.title)}
+                            </a>
+                            <div class="reference-domain">${this.extractDomain(ref.url || ref.uri)}</div>
                         </div>
-                    `;
-                }).join('')}
+                    </div>
+                `).join('')}
             </div>
         `;
     }

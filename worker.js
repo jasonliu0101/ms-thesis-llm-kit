@@ -16,6 +16,10 @@ export default {
       return handleTranslateRequest(request, env);
     } else if (path === '/stream-gemini' && request.method === 'POST') {
       return handleStreamingGeminiRequest(request, env);
+    } else if (path === '/sample-data' && request.method === 'GET') {
+      return handleSampleDataRequest(request, env);
+    } else if (path === '/virtual-references' && request.method === 'GET') {
+      return handleVirtualReferencesRequest(request, env);
     } else if (path === '/' && request.method === 'POST') {
       return handleGeminiRequest(request, env);
     } else {
@@ -1181,6 +1185,368 @@ function createResponse(data) {
   return new Response(JSON.stringify(data), {
     headers: getCORSHeaders()
   });
+}
+
+// 處理範例數據請求
+async function handleSampleDataRequest(request, env) {
+  console.log('📊 處理範例數據請求...');
+
+  try {
+    const url = new URL(request.url);
+    const example = url.searchParams.get('example');
+    
+    if (!example || !['1', '2', '3'].includes(example)) {
+      return new Response(JSON.stringify({ error: '無效的範例編號' }), {
+        status: 400,
+        headers: getCORSHeaders()
+      });
+    }
+
+    // 範例數據（從 sample 文件中提取的結構）
+    const sampleData = {
+      '1': {
+        question: "銀行是否有權片面要求調高房貸利率？",
+        groundingMetadata: [
+          {
+            web: {
+              uri: "https://www.fsc.gov.tw/ch/home.jsp?id=96&parentpath=0,2&mcustomize=multimessage_view.jsp&dataserno=201904290001&aplistdn=ou=news,ou=multisite,ou=chinese,ou=ap_root,o=fsc,c=tw&toolsflag=Y",
+              title: "金融監督管理委員會 - 金融消費者保護法相關規定"
+            }
+          },
+          {
+            web: {
+              uri: "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=G0380098",
+              title: "金融消費者保護法"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.banking.gov.tw/ch/home.jsp?id=60&parentpath=0,4&mcustomize=news_view.jsp&dataserno=202012300001",
+              title: "中央銀行 - 房貸利率調整相關規定"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.judicial.gov.tw/tw/cp-1047-89123-2a3e9-1.html",
+              title: "司法院 - 房貸契約相關判例"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.cpami.gov.tw/index.php?option=com_content&view=article&id=10001",
+              title: "內政部不動產資訊平台 - 購屋貸款須知"
+            }
+          }
+        ]
+      },
+      '2': {
+        question: "住戶不滿管委會決議，可以透過什麼方式表達意見或申訴？",
+        groundingMetadata: [
+          {
+            web: {
+              uri: "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=D0070118",
+              title: "公寓大廈管理條例"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.cpami.gov.tw/index.php?option=com_content&view=article&id=10002",
+              title: "內政部營建署 - 公寓大廈管理相關規定"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.judicial.gov.tw/tw/cp-1888-204567-2a3e9-1.html",
+              title: "司法院 - 管委會決議相關判例"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.tcg.gov.tw/ch/home.jsp?id=5&parentpath=0,1&mcustomize=multimessage_view.jsp&dataserno=201808200001",
+              title: "臺中市政府 - 公寓大廈爭議處理"
+            }
+          }
+        ]
+      },
+      '3': {
+        question: "公司可以要求員工加班但不給加班費嗎？這樣是否違法？",
+        groundingMetadata: [
+          {
+            web: {
+              uri: "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=N0030001",
+              title: "勞動基準法"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.mol.gov.tw/1607/2458/2478/2479/",
+              title: "勞動部 - 工時及加班費相關規定"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.judicial.gov.tw/tw/cp-1737-182456-2a3e9-1.html",
+              title: "司法院 - 加班費相關判例"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.cla.gov.tw/1950/1952/1955/10734/",
+              title: "勞動檢查處 - 勞動條件檢查"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.bli.gov.tw/0003570.html",
+              title: "勞保局 - 勞工權益保障"
+            }
+          },
+          {
+            web: {
+              uri: "https://www.ntpc.gov.tw/ch/home.jsp?id=28&parentpath=0,6,27",
+              title: "新北市政府勞工局 - 勞資爭議處理"
+            }
+          }
+        ]
+      }
+    };
+
+    const selectedExample = sampleData[example];
+    if (!selectedExample) {
+      return new Response(JSON.stringify({ error: '找不到對應的範例數據' }), {
+        status: 404,
+        headers: getCORSHeaders()
+      });
+    }
+
+    // 隨機選擇參考資料（20個到最大可用數量之間）
+    const availableReferences = selectedExample.groundingMetadata;
+    const minReferences = Math.min(20, availableReferences.length);
+    const maxReferences = availableReferences.length;
+    const numReferences = Math.floor(Math.random() * (maxReferences - minReferences + 1)) + minReferences;
+
+    // 隨機排序並選擇指定數量的參考資料
+    const shuffledReferences = [...availableReferences].sort(() => Math.random() - 0.5);
+    const selectedReferences = shuffledReferences.slice(0, numReferences);
+
+    const response = {
+      question: selectedExample.question,
+      references: selectedReferences,
+      count: selectedReferences.length
+    };
+
+    console.log(`📊 返回範例 ${example} 的數據，包含 ${selectedReferences.length} 個參考資料`);
+
+    return new Response(JSON.stringify(response), {
+      headers: getCORSHeaders()
+    });
+  } catch (error) {
+    console.error('❌ 處理範例數據請求時發生錯誤:', error);
+    return new Response(JSON.stringify({ error: '服務器內部錯誤' }), {
+      status: 500,
+      headers: getCORSHeaders()
+    });
+  }
+}
+
+// 處理虛擬引用數據請求
+async function handleVirtualReferencesRequest(request, env) {
+  console.log('📊 處理虛擬引用數據請求...');
+
+  try {
+    const url = new URL(request.url);
+    const category = url.searchParams.get('category');
+    
+    if (!category) {
+      return new Response(JSON.stringify({ error: '缺少類別參數' }), {
+        status: 400,
+        headers: getCORSHeaders()
+      });
+    }
+
+    // 虛擬引用數據
+    const virtualReferences = {
+      "車輛竊取": [
+        {
+          "title": "刑法第320條竊盜罪相關規定",
+          "uri": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=C0000001&flno=320"
+        },
+        {
+          "title": "司法院大法官解釋第509號 - 竊盜罪構成要件",
+          "uri": "https://cons.judicial.gov.tw/jcc/zh-tw/jep03/show?expno=509"
+        },
+        {
+          "title": "最高法院刑事判例 - 竊盜罪認定標準",
+          "uri": "https://www.judicial.gov.tw/tw/cp-1888-88234-2a3e9-1.html"
+        },
+        {
+          "title": "內政部警政署 - 車輛失竊案件處理要點",
+          "uri": "https://www.npa.gov.tw/NPAGip/wSite/ct?xItem=12345&ctNode=12345"
+        },
+        {
+          "title": "交通部公路總局 - 車輛登記相關法規",
+          "uri": "https://www.thb.gov.tw/page?node=12345"
+        },
+        {
+          "title": "臺灣高等法院判決 - 車輛竊盜相關案例",
+          "uri": "https://judgment.judicial.gov.tw/FJUD/default.aspx"
+        },
+        {
+          "title": "法務部檢察司 - 竊盜罪偵查實務",
+          "uri": "https://www.moj.gov.tw/2204/2795/2796/12345/"
+        },
+        {
+          "title": "中華民國律師公會全國聯合會 - 竊盜罪法律問答",
+          "uri": "https://www.twba.org.tw/knowledge/detail/12345"
+        },
+        {
+          "title": "車輛竊盜防制宣導手冊",
+          "uri": "https://www.npa.gov.tw/NPAGip/wSite/public/Data/f12345.pdf"
+        },
+        {
+          "title": "刑事訴訟法第228條告發義務相關規定",
+          "uri": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=C0010001&flno=228"
+        },
+        {
+          "title": "臺北地方法院檢察署 - 車輛竊盜案件處理流程",
+          "uri": "https://www.tpc.moj.gov.tw/252/253/254/12345/"
+        },
+        {
+          "title": "車輛失竊證明書申請作業要點",
+          "uri": "https://www.mvdis.gov.tw/webMVDIS/Service/12345.aspx"
+        }
+      ],
+      "噪音干擾": [
+        {
+          "title": "噪音管制法全文",
+          "uri": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=O0030001"
+        },
+        {
+          "title": "環境保護署 - 噪音管制標準",
+          "uri": "https://www.epa.gov.tw/Page/12345"
+        },
+        {
+          "title": "公寓大廈管理條例第16條 - 住戶生活規約",
+          "uri": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=D0070118&flno=16"
+        },
+        {
+          "title": "民法第793條相鄰關係規定",
+          "uri": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=B0000001&flno=793"
+        },
+        {
+          "title": "臺北市政府環境保護局 - 噪音檢舉處理",
+          "uri": "https://www.dep.gov.taipei/Content_List.aspx?n=12345"
+        },
+        {
+          "title": "最高法院民事判例 - 相鄰關係糾紛",
+          "uri": "https://judgment.judicial.gov.tw/FJUD/default.aspx"
+        },
+        {
+          "title": "社會秩序維護法第72條 - 妨害安寧罪",
+          "uri": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=D0080067&flno=72"
+        },
+        {
+          "title": "臺灣高等法院 - 噪音侵權損害賠償判決",
+          "uri": "https://www.tph.judicial.gov.tw/cp-1052-12345-2a3e9-1.html"
+        },
+        {
+          "title": "內政部營建署 - 公寓大廈噪音爭議處理",
+          "uri": "https://www.cpami.gov.tw/最新消息/法規公告/12345.html"
+        },
+        {
+          "title": "新北市政府 - 鄰里噪音調解服務",
+          "uri": "https://www.ntpc.gov.tw/ch/home.jsp?id=12345"
+        },
+        {
+          "title": "中華民國消費者文教基金會 - 噪音糾紛處理指南",
+          "uri": "https://www.consumers.org.tw/unit412.aspx?id=12345"
+        },
+        {
+          "title": "環保署噪音檢測標準作業程序",
+          "uri": "https://www.epa.gov.tw/DisplayFile.aspx?FileID=12345"
+        }
+      ],
+      "消費糾紛": [
+        {
+          "title": "消費者保護法全文",
+          "uri": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=J0170001"
+        },
+        {
+          "title": "行政院消費者保護處 - 消費申訴指南",
+          "uri": "https://www.cpc.ey.gov.tw/Page/12345"
+        },
+        {
+          "title": "民法第354條物之瑕疵擔保責任",
+          "uri": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=B0000001&flno=354"
+        },
+        {
+          "title": "公平交易法第25條 - 不實廣告規定",
+          "uri": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=J0150002&flno=25"
+        },
+        {
+          "title": "消費者保護法第19條 - 七天鑑賞期規定",
+          "uri": "https://law.moj.gov.tw/LawClass/LawSingle.aspx?pcode=J0170001&flno=19"
+        },
+        {
+          "title": "臺北市政府法務局 - 消費糾紛調解",
+          "uri": "https://www.legal.gov.taipei/News.aspx?n=12345"
+        },
+        {
+          "title": "中華民國消費者文教基金會",
+          "uri": "https://www.consumers.org.tw/"
+        },
+        {
+          "title": "公平交易委員會 - 網路購物相關規定",
+          "uri": "https://www.ftc.gov.tw/internet/main/doc/12345.aspx"
+        },
+        {
+          "title": "最高法院民事判例 - 買賣契約糾紛",
+          "uri": "https://judgment.judicial.gov.tw/FJUD/default.aspx"
+        },
+        {
+          "title": "經濟部中小企業處 - 電子商務消費者權益",
+          "uri": "https://www.moeasmea.gov.tw/article-12345.html"
+        },
+        {
+          "title": "消保法施行細則相關規定",
+          "uri": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=J0170002"
+        },
+        {
+          "title": "金融消費者保護法 - 金融商品糾紛處理",
+          "uri": "https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=G0380098"
+        }
+      ]
+    };
+
+    const references = virtualReferences[category];
+    if (!references) {
+      return new Response(JSON.stringify({ error: '找不到對應類別的虛擬引用數據' }), {
+        status: 404,
+        headers: getCORSHeaders()
+      });
+    }
+
+    // 隨機選擇並打亂順序
+    const shuffledReferences = [...references].sort(() => Math.random() - 0.5);
+
+    const response = {
+      category: category,
+      references: shuffledReferences,
+      count: shuffledReferences.length
+    };
+
+    console.log(`📊 返回 ${category} 的虛擬引用數據，包含 ${shuffledReferences.length} 個參考資料`);
+
+    return new Response(JSON.stringify(response), {
+      headers: getCORSHeaders()
+    });
+  } catch (error) {
+    console.error('❌ 處理虛擬引用數據請求時發生錯誤:', error);
+    return new Response(JSON.stringify({ error: '服務器內部錯誤' }), {
+      status: 500,
+      headers: getCORSHeaders()
+    });
+  }
 }
 
 // 處理 CORS
