@@ -74,9 +74,28 @@ class StreamingChatApp {
                         }
                     }
                 }
+            } else {
+                // Case E/F 但沒有虛擬引用標記 → 使用一般識別碼 (1-3)
+                if (currentQuestion && this.selectedExampleQuestion) {
+                    if (currentQuestion === this.selectedExampleQuestion) {
+                        const exampleQuestions = [
+                            "如果我的車被別人騎走，但加滿油還回來了，我可以告他嗎？",
+                            "鄰居的狗經常在夜間吠叫影響睡眠，我可以採取什麼法律行動？",
+                            "我在網路上購買商品但收到假貨，賣家拒絕退款怎麼辦？"
+                        ];
+                        
+                        for (let i = 0; i < exampleQuestions.length; i++) {
+                            if (currentQuestion === exampleQuestions[i]) {
+                                digit1 = (i + 1).toString();
+                                console.log(`🎯 [${currentPage === 'case-e.html' ? 'Case E' : 'Case F'}] 真實引用題目 ${i+1} 識別碼第一位設為: ${digit1}`);
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         } else {
-            // 一般情況：Case C/D 或沒有虛擬引用的 Case E/F
+            // 一般情況：Case C/D 或沒有引用數據的 Case E/F
             if (currentQuestion && this.selectedExampleQuestion) {
                 if (currentQuestion === this.selectedExampleQuestion) {
                     const exampleQuestions = [
