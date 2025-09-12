@@ -143,14 +143,38 @@ class StreamingChatApp {
             const startBtnText = document.getElementById('startBtnText');
             
             if (startButton && startBtnText) {
-                // 直接啟用按鈕，不需要等待
-                startBtnText.textContent = '開始使用系統';
-                startButton.disabled = false;
-                startButton.classList.remove('disabled');
+                // 實現 10 秒倒數計時器
+                let countdown = 10;
+                startButton.disabled = true;
+                startButton.classList.add('disabled');
+                
+                const updateCountdown = () => {
+                    if (countdown > 0) {
+                        startBtnText.textContent = `請先閱讀說明 (${countdown}秒)`;
+                        countdown--;
+                        setTimeout(updateCountdown, 1000);
+                    } else {
+                        // 倒數結束，啟用按鈕
+                        startBtnText.textContent = '開始使用系統';
+                        startButton.disabled = false;
+                        startButton.classList.remove('disabled');
+                        
+                        // 更改圖標為 play
+                        const icon = startButton.querySelector('i');
+                        if (icon) {
+                            icon.className = 'fas fa-play';
+                        }
+                    }
+                };
+                
+                // 開始倒數
+                updateCountdown();
 
                 startButton.addEventListener('click', () => {
-                    modal.style.display = 'none';
-                    console.log('✅ 開始使用系統');
+                    if (!startButton.disabled) {
+                        modal.style.display = 'none';
+                        console.log('✅ 開始使用系統');
+                    }
                 });
             }
         }
