@@ -97,22 +97,34 @@ async function handleUserAssignment(request, env) {
       referrer: requestData.referrer || 'direct'
     };
     
-    // 創建一個基於時間和客戶端資訊的雜湊值
+    // 創建一個基於時間和客戶端資訊的雜湊值（改進版）
     const hashInput = `${clientInfo.timestamp}-${clientInfo.userAgent}-${clientInfo.referrer}`;
     let hash = 0;
+    
+    // 使用更好的雜湊函數來確保均勻分佈
     for (let i = 0; i < hashInput.length; i++) {
       const char = hashInput.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash; // 轉換為32位整數
     }
     
+    // 添加額外的混亂因子以改善分佈（MurmurHash3 啟發的 finalizer）
+    // 這確保即使輸入有規律性（如連續時間戳），輸出也會均勻分佈
+    hash = hash ^ (hash >>> 16);
+    hash = Math.imul(hash, 0x85ebca6b);
+    hash = hash ^ (hash >>> 13);
+    hash = Math.imul(hash, 0xc2b2ae35);
+    hash = hash ^ (hash >>> 16);
+    
     // 根據雜湊值決定分配（偶數為 Case A，奇數為 Case B）
     const shouldUseCaseA = Math.abs(hash) % 2 === 0;
     
     const assignedCase = shouldUseCaseA ? 'Case A' : 'Case B';
-    const redirectUrl = shouldUseCaseA 
-      ? 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-a.html'
-      : 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-b.html';
+    // 根據雜湊值決定分配的網址
+    const redirectUrl = Math.abs(hash) % 4 === 0 ? 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-c.html' :
+               Math.abs(hash) % 4 === 1 ? 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-d.html' :
+               Math.abs(hash) % 4 === 2 ? 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-e.html' :
+                             'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-f.html';
     
     console.log('✅ 使用者分配完成:', {
       assignedCase,
