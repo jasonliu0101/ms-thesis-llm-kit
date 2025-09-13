@@ -2635,6 +2635,61 @@ sup {
     transform: scale(0.95);
 }
 
+/* Survey Return Notice */
+.survey-return-notice {
+    background: linear-gradient(135deg, #e3f2fd 0%, #deedf9 100%);
+    border: 1px solid #2196f3;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-top: 10px;
+    font-size: 0.9em;
+    text-align: center;
+    color: #0d47a1;
+}
+
+.survey-return-notice i {
+    color: #2196f3;
+    margin-right: 8px;
+    font-size: 1em;
+}
+
+.survey-return-notice span {
+    font-weight: 500;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.survey-link {
+    display: inline-block;
+    background: #007bff;
+    color: white !important;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    margin-top: 8px;
+    transition: all 0.2s ease;
+    border: none;
+    font-size: 0.9em;
+}
+
+.survey-link:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    text-decoration: none;
+    color: white !important;
+}
+
+.survey-note {
+    font-size: 0.8em;
+    color: #6c757d;
+    margin-top: 8px;
+    text-align: center;
+    font-style: italic;
+    line-height: 1.4;
+}
+
 /* Session ID Display in Chat */
 .session-id-display {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
