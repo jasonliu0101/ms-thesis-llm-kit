@@ -4817,7 +4817,623 @@
                 ]
             }
         },
-
+        {"groundingMetadata": {
+                    "searchEntryPoint": {
+                        "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHXPsS25ay6K3l_kMszKCII2szg8ThjlKmto0LDHc3rypjh9rQG1XFag0Id7n4_y8AxH6vMCn6n_vDVpw8-W6ylxKPpuUwVcW4qDA9IMUicvQcWO6rVMV8YDQlzLY-_sU5gAYMSV4IsZAVjBFotbaHYug9mVw2c_cY7dtCAlSRUWRuYuHFpILtgdtHQoztn7hACIi8ZXmUGwKdfnJ-edaOMWUn9-K5n2kz2SKDKm6Dr8MLqFpxJQ-HwCQs-oHPhkE1l2ecfaRM4o9o_HgLKmYeOEnSIAmJfWPhWsXeaPfOBD3ElVnqbeVoKi3ePDPiUIttrEh6w\">網購 收到 假貨 經驗分享 台灣</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHybXKmF6zL_dnXNwkuJ0RRWWXZrf9RR-vYBdPOLyUQfyRcO99WdEj40yovqo-MQPAWg7X6H-TeB1btZatHHu-qzZdLfIm6zVX2jNqSJA7ChgiaNG64ELEcHFSpPPYVkN7upIX1jpFay4Y0OZrZRsq7XGgvMmPTBxK5FFcw9MEMYwmFbQDFK_A-z4j9ahmpSCya2r_yhQO14NDEcUe9ocxV9Jz-KrQB8RYcQd9wIUdHNSXJWeGxpRfOIcjxqRdCH6PPuksxll534wVtXIH5eCStrTy1QxP1AOo=\">台灣 刑法 詐欺罪 網購</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG0EBuJWRXyqQ9GJq13H5hhInPTg9a-PX21_3kpJhV6Ok6ZH8Au29vzjDQbiDto0GGo7u3PWiLiw2dQdCTpKUIXq-tdJPcLTJ0RsrzIoxICqu9He5earltAshko5GxhdBw26FS3YwjvaMZCPJrP9qg5Iaj8qvlP4IkdaeWWr8G5zWfpN4QVNpAcvrQ6iga1jSkNNiD5fBHqnpanHJXo0NHmIODsvcGBUWO68eMldhqiDvSd2KhW0dg_xFzKfUl49DZbBLY-6SKKSRSPqZ5jqUc=\">台灣 網購 詐欺 提告</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEWyJnVznDyomWs-KwxMSEebbEbUyT2wskGJ87znlZc3rZzshhPhB2dvRz3Dtf5NgesKJTg0boy3lZX0jTe4syRrXpoRaOpt99M0ipeMQQK77eAtbMFj00nY2Rmvpx5KUbz7j6mVpchr5ElCXQ6D5afU9bQz18KaVl1ZwbWaem6VCi7WiL651sns8N3mv5I7lAFsTYp4tO_GZU4USeLHou-M0RIy5Zw2DHml347cRiq_Jw4C-47rqTx-vqjDcYJ60rSWi6je9BoCXgJ0ar4Ex4uu5mH-9PVaoTs97P0Hu64eP4G\">台灣 網購 假貨 退款 法律</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHdmwO7R7YYr-7Zgnlas2vmzS1lnXsa836-bmQT9KZpJGbGOsp6SVTNmm7LP2Fgk38Ud2m7reZyXrl4FggxWqf8HvTG6XYzRsh9-DtNheGIMcPitd9X_CG2Jp1ac027QR5uDRIrWw2LTXXF5DPe8zVYYjVzX_3njo-JJTTUEVKMeVIhz1jeKCbjXpESe4v2I2RU4HpUXFEPvGG3mk6NKzZrLZi0E4YwaY8vGmcsduHSdBEIUqNLiW-sAZEIts90txoAqUmxyJemIMOjuS9UJp89C7bSxwMJHwN5ucKFtSbG82M1XHPlBKUBZca6B3Crvp0krnM=\">台灣 消費者保護法 網購 假貨</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEvJdIFheRPTwYjUNAsOS9WNPuks5N7qQXcVYsIhfSVjPKAng-JTrPYSH-lxCF1FfS0hglD3YDMXgwbHDwqkkAFBDxWJ_Iz_nuy0sPgpSZAHKwG9fe3t9uLvJREG_cj7LKrf0KtE1M5yQ7sc_vXzXKENAie07lNQCjwfqHJFh1-i58mgSyiuluri1tawQgzOzbZm9i1O_TDXSuQm6eKTVY3UHHPbZIiwyWGBNpFOueU-nbkCVbQe12oGqMXeraC1n2517aAsGw74jYMdY1R292ARMTGpy_53zLRieLXbris9Z5twpZxrOErRQvi30EGobYapNfg_VGC4hDfHA==\">行政院消費者保護會 申訴 流程</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE7S1U2uvH1b3gpUIwGnKVclxOxaLlCC71gHv3r6y2RUiZiedLMZAZ4GEFvHHcPIsC9cg6YrPnjIMSyrJvr7TSO_B1284D0HpA8roJUTUcZ01R_YWGR_bIi_6zs851Z_2is04RYVt05laOr1NO2Rjp023N2foYUo0h36tzzCfRPMZjAAJFD1xykSaVh34nsgokBhm5oMsC2cYgp-k4au55lUoWI6PzX0Z54YjKzTGWc9FxlnrArfUC6rjf2newGUr_MnGnXZvFNFnbrF0YiTixWx_SNTRb6J7qCr14LlA5udWn76rIwxWU4vnk=\">台灣 商標法 仿冒品 購買者</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFUitRC-Vh3ItYZmsbv9k6uQFiEt7C5FdBwAwor4fzYeoEBD0gJM6bP2Fv9ACESqJna2Dn5O0uhN2Zj95Dnn0MIm6DSjvqpxFEjoO2rohYvOOL_obDMFeWKAQTYmLZXUPLixo1chKGcLYbBgBmaiA_wy0HDI0nXK-BMNbvd3G4Tz1KfeW34lbLq7JPj3bjQdq0Q-lPppSIFCp3_fWOSWLf-DkCfWajiViqRH7U5A7VxxC0PmK0qhbfvM_bFkyU1n_z9TglDdt4JR2FQHy_ivRHpNr3oWcTWGXS2sZL1vDaKjfOkiGa_uzxMnxKyyFwwBnI0Ua1Q\">台灣 民法 買賣 瑕疵擔保 假貨</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEFF4HEpvky8lLOkDcAZK3h8e2y_puFVy-DWm-940tIUF_hQknTkd-FKFbaxD9QHqyaeUSk1jVmAewhQJ6VYgHnCxWjTZz26XGwfr5oc9Fb_V6Lw28vUmtnWl8bXSpvrWFH9MHjQEDqu-3pj4A1jg3z2URAjjVYWNeybZ8W3UskKryf62PN5crLwdwfqt_WJu1qNR9Gc5I0Wa8t4BLzYBhb8thqnhCVFNuRAQkBwaE2WsnHdwv007p1HVzvPw1S2bBH3962MpLSLZtukphB61hv2oJV1XTJXL-cwrCLc0vRAd60J3w1O5SUCD6WLCIc3mW7aKv7\">網路購物 糾紛 處理 流程 台灣</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH6TJcqmcieA6vLOJr4zHG4xR0sZYYAIX5Fla-4YAKhChYrRY8oYGlOfO3dGlj5eBAHp3Nv_el5z1pBllfgR5ijL8ZB9_Nt4JKkE2SEcA5N6PI2tScCEw114kt5872EvhjCqKfzFXQDQNR1pvxZgGKteN3NlT74C6LkVsxKHo2fpkw1f90Cki7r-HZFqSoAN613Igt8BuvjA56uqS1z1uddSP1SNfaaEKPYJnnrSCDgc9VErD58ph9rvDsoXiAG37SjW8taefym0lbyPm8k9YtQTa24r2pwSyGJfb69AYlz-C0zCeCdNb4WhQ==\">公平交易委員會 網購 假貨</a>\n  </div>\n</div>\n"
+                    },
+                    "groundingChunks": [
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHFWkyOa00TWJYoTQ_q9jVBA_srYImQTBCUv8uXcqN1-YZCkIFE90mKxvqEl4jIyLfyO13cJb-2ty_ppMUGL48Qe9uFVnvjBQuvrXzrC3_cHqncBIAS90LcMO1VbGI=",
+                                "title": "oipt.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHDBuKTmDzmNtcB2XZ7X73AB9_Eb5ndCSEZJgjl0oI65-NBDwie_uTZLIhEEOYhqffeor0c09yFoPcV80Dl6inUKxhYo_mFFQWS4YNZ07s2wRDtzJsPJa8MtJ95CVTuoN9-x_U7FuXwz_IFRrgEbw==",
+                                "title": "lawbank.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHjjt2s9FWmbfQbiaPPm8951q5Vv1eX--WKCo8SPH11_RbKIYl6V-OEW--ONaob_TC9hqsIX-RDRNKOCVcMqCM31gcpmrxW-Cq4_MJ_Z8eTL47LRQHM-Z4CSfSDOslQNU4c67MNhT10Nn-Y5dHpkm8ydXuzuM8Sy3yS",
+                                "title": "legis-pedia.com"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGRJ2P1GQ2J9k1GBJoHx3UTjfSQLghtze_4ExSVuthuYpWh1RFzPFr72es7CBG8DhXigaNscYZV851V3hWgWCm9xX62NSkmrdTf2exBOVf1zuAt0bo87ebRj1zK3jyUHAwgwkOWMlyXTAqEdJU=",
+                                "title": "vocus.cc"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH9cTjlILf2n5FlVSA8eGaWoHhOJiBJTMjVq3DLF6a-qlz9gVj01CcIkyqnT0WJ85aQj0rFhAxNkyjkgK3yR1p9vaJQT_uEhItdvi8mhpLX9AVj2wm84NAWenXyOW0YDcMMf734Ad9Rzw==",
+                                "title": "honganlaw.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHMk9JpLJWsw1tXmqhbhAo8UlUiiLB6Zlsq2iZA3IRmYCNCG8rpGZVArVFS4z27dm8NyCnUQh-OtRAiGRilH1g5LGwvErlzcqy5QSTVDQ_rttj-Q_TDvQ9ysH5qGyM0o6MGzpkCw7DdgC2sbEqQIPuibej9hzDo3rHZ4Ge7",
+                                "title": "moj.gov.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFCUH9L1SFPaHz6HcqYeqS6QsQoptGyZNbW7AVE0BGcl4_DR8Ci6t6G0j377-KFfYjklljlJalMfs-GNcHM_q69bLAxTEZorNuxXT_C66y6x7Iw93m4unR2SXYJ_nVlZ5t6rhTHM5CGnw==",
+                                "title": "squaresun.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEmeNdcrRELibBO4qQZt7DFXERdum42u6j-7Lr-M881uVs249tt-_xBtGBtfeE9zPG4Ex7dYQOKE4m9RpBh5if3ULZftyV-N-xUKKSGrZDsyRTia9yAzo5ddB0VSXS4JhOsORrXIahuOwxuu2sCqz86afKUxQFbREoNGTny",
+                                "title": "sme.gov.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE_piFeqXrtvtKLKSIv7yz0y-7fNUu-vZXMUkmR98k9WXjVBTnDt8U3jZp1vDOl-eFIloEvOSy2kJ7HDlmF23OzaCxNzwoapL6sWEMXem_Q0ssJWrAf_zHuLsOMhdL1",
+                                "title": "honganlaw.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFO29npMK1CVGoXgEIl3l7At8sFSqlf_1uHSFdwKBSgEbGUszOd0aU0CyBW1d0ptqg3BQZxQXQ4ckBPSkB3Z5WvX6HCatfStJ1uYkTC1nvFuWzdJh9HVu-G81dbHQpBFs8=",
+                                "title": "sinsiang.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFoJnLb0_7FqXxDQnbafDjCixceC4Ie8vizKldd3nA-IRpqH4WZyrT2zG1F_hh_sRB9meG0E3ep85L_ctQRJu4-UuKZk2aBwzqZvIV5yz-GsUG-HH53YiSEDrhZ3ATQ7mFtBWN6Pqs=",
+                                "title": "fiftyplus.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGS4lXVs1Qc-iOxxEv0HK39yDRZcYxkvHJ3tKldxBW4iyKmmkknVC6sp70IgQwDyHzSWUfIo44jdLw8FsiIqEjmyo8Urv22xVNDVnd2eU0rsvOfibaE0bxpG2WqLD72xtgNOhc2gR42VtA=",
+                                "title": "ezlawyer.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEhpRMLZjGmnMPP1nXc8TOwbJ0rey23gYuO38cGwDfP2ogipDRgAy63XSX_BdkfQ17BC8kmxS8adz9dNYvVyXpGmqd_LtRT-MyACGCjYcIWvrQHiln2sPlTlFIDRXdK8ZwsDyGfQU76bifehp4=",
+                                "title": "vocus.cc"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQExYjDSCaVkOdSqu2qG-Ym5cTjO_RYKVvPqzxnOzerZQy7OI0BSlwprIMd9yE7hjWfAoLNUnKQ2n9QCWyyY6hvor5SvNy-S_REDT_jPqI9AaAd_CdYQiz3FoUbOrlhfMAZw1Y0p",
+                                "title": "pinjie-law.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGcZ89X3YWYEAwVC97FVzy86uHTx7KCCF93kvK0F9U8f5u7pEi0KZ-nje4jcDpngiJj4-WDj9mQfzrwALvQlcDiA8AV-_ar2B_0IdBzbX9pUEIJkNs8wPc2CTZgvbylkpHx5oTvHtFvxRiDVdk=",
+                                "title": "vocus.cc"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGvQ2T63DMOWNP85Zv7nE4CIgczKTdBRsNLqssDasUwDpt8aNUMPOMT-ciq5pM11W5HVAYOc6XH1sffOuYQm-dcmNm1ZWBD6tWGpUwAUcbj93J6OlU6Y8VOlxrg3Fhuz04=",
+                                "title": "gvm.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFjkbYx3ub7hberVVOxgj77Lj_MeLCWGY4o65JT6uK9c6IOXIS9oDXjfbHBJMevmlr8oOxrJ63U1ImkTxREmq6uN9-eV5aNwS05i7CijRdz",
+                                "title": "mll.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEzVqtQN676H_QT8tP14s2FauPBsR0GPgcAVAgs-8bXzaB8CHiulk2DFvJR2oWe985zuy3893BXIWIERXsTxaqkGQMHvQ0F00U5Fsv7dodZmU_46BzH-Z-Iokqftdl5_Au3iK3qCR0Xpmz9-jCpTm9B3a_4pkv4MQ==",
+                                "title": "taiwanlawyer.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHWrrUwu5dL8gpwmuqTTFEG8UPy71qW_GWehifmFYQZbPgcwYeyq_PWFMAbTBBjckigmhqa8sok_O5fFgSNbzYxlbMKbsciywtSO6l8EQSq5Dv0P0AF4nhukqNZSimxDlgxZrWiW212Qsdt0ccGn-8S3DLLo3AhlYEr",
+                                "title": "easy-law.net"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG75QUWATivU4ZKcnlXPIFtEcCV7DShLrD414PsNTPQ0McIxVy73KsvoklZCA0zOP9A3N0KdXlxrwYHwody4fFWKFJQHj7otf0O2zeueBJ-uUkFSloC_RTHpKMpOXSFFzO6Dpe0lVWn-KfAjP4xaPOBjnKnsvuIxsd_jfdu",
+                                "title": "sme.gov.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEoL0UM83ZfJiz-X9At7FZzzkSYpJqcg7AJKZu8YEpbW0FI0KV9Zvxt665XcK6jj4YUklToYMbXH7-He4s4Ev_m9X2nD58PvUoHfDWoWUhLXv5Ems9RPoJ_52WUXtNNdPqMVkPNmAEMpm543oI=",
+                                "title": "vocus.cc"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7ojoYPNr2rWyk-M9ANdd68ZccPb2M2I80h1z819w3ftriBCbbbOQ_mANgBv2mv0ZWzENunTIeKyRFW4tzoJXSwPLgNv0f7u2mKXNXLO5EiJgtU_bwfZnwggIgzwsMa2FEWoib_htZL4VJ2eB_B247AbbvwCpytLS_QThcLAG2HOnbu1u95cdyJZDqV8I=",
+                                "title": "wpto.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEYUNM8i3uChisyK0cyuAARRzA4YPcgLFej3JSs39GHQl5EuNrQYjEI3sVjEHUlWWZ2DbLE-mSibZXWx-bABhKeGIvrdn2lHgU2ZQZDW6LYXGU49kC7jbSEK2eo3-DyE6drr0WBYwJQh4qeQBA-vDE1Thc=",
+                                "title": "moj.gov.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHrmMSSmknI3G0RpDzHtytO2_FMinGu4hPWk6gRNaE_SGtSzuEPtq_6XRo2bv-w_k9uLOMwDBF7oOgfYZVSrZmw8HY91hKSEC2Td9ojPbU0dC6LAgeNtBp07L8yYFbKI3b3LW0nuXxBKm9FhfyP5GF1uUY=",
+                                "title": "ezlawyer.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEXOUP0KTc0lBxIL8SqmrFeXdTTJh9HW1HNRJiEGOKCSJaUYH4EoI9yjkd6QUjrkrer9dm6VCbd8fl0arhkdexbLEL4KWhVxMKrA3CpFvRVWaB_Yn22i0qE8U9hLxKE8sxBa82aDss=",
+                                "title": "ey.gov.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE6u0pPy7aNg9eJh49m2Be2R5Vvo0_HqYx2lH5AgVjodqBlu-_kcOs2M2sa9qGqFn9NMNO6aKuM8CkNTLYDoIvhNcKZkj5VJu3MR6v5D-QuJv20ayinAc8f-bh9NaG5U-wtXP9V5s4sC5fv",
+                                "title": "taichung.gov.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFkxeb19lcPkHTHVDDYXvqnsSyI8SGBKugrPAlGB6jVGdp5cTy6M1G2Kh6gq8SGDzpbYWVz74BwMRIypTShwtmq8CPoaxKHEn2hxC3EKphEClNusXfityJBiiZATZ_a7kM_DIQ1B_h-ywRXej8A-aLyWw==",
+                                "title": "ey.gov.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGV2bqnf1etDlKBeIdwvlut0fLBGhul3FmtHzrIeNuEurHQ63T4iv8P8IVG-PTu_MGEickrzHcPlr2GZIbZNT3qpAD_zc8UNtqfTzRLeLczWPFJ87j0lipt9Yi9mLAR7_4yHvZ7dOI5Av8=",
+                                "title": "cpat.org.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDNZcqam2EN3JQ968hkRQ_ZXp7fvthiVlqv3_TpMtFVz629ZARugxA7OvYKBRsje7gLq5jVq4yuGnmk1nINu4ki5lCOblyAkmDmB5CBesebOhbWULOCIR0hurImTnq1mkHRFoaRJ8lsShNEahsfhvqXdl_",
+                                "title": "consumers.org.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEMUrvTt5lo_Hh_z2oL4D_iXlnCvVDxRC_GUpENAEhb9OzJI3wuvIdA6UMXVx3lm9TJAD05I0KtMS2gsTEWeun3wUbkYwpuEEbqRaEp_7S7bu8c5OaHcOb2sESZ37UY4w==",
+                                "title": "ithome.com.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFtk6Z75h9B_DChH_YASjISpKWDtvW6iYQSRvCPziXP4TR-S57CHe2GwIBFfO1wsBvbjDx2U7lEoRJwrj5m_VOKWQfwX0Q8zvcksRfMpl0L4yaBP9NF1QJdMv5u2odtmVvJkEK3aqQbwXGYtCq3TAG94F-fhWvI6MBTmGplQ0feFnpKm0QoFgOWv6aXZNh6OKYEoLdc1RYWa9JN6BTcCHSZkxrREQ==",
+                                "title": "mof.gov.tw"
+                            }
+                        },
+                        {
+                            "web": {
+                                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGkWaR3ez7lLkQWLWFWVxjHKCQn-k0_1ORTcRlnqkcxCb3-1WqBUiJoOKNsQDPFreH0URQNFqjHRX8IA7D6cl76uKIXCcp_UgCZD1lbxqYRFnQu-lByWbJA_yjNx4EZ2kgmtZc=",
+                                "title": "aoc.gov.tw"
+                            }
+                        }
+                    ],
+                    "groundingSupports": [
+                        {
+                            "segment": {
+                                "startIndex": 1010,
+                                "endIndex": 1115,
+                                "text": "假貨明顯屬於物之瑕疵，因為它不具備一般商品應有的品質或賣家所保證的品質"
+                            },
+                            "groundingChunkIndices": [
+                                0,
+                                1
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 1123,
+                                "endIndex": 1251,
+                                "text": "*   **權利主張**：根據《民法》第359條，買受人（您）可以主張「解除契約」或「請求減少價金」"
+                            },
+                            "groundingChunkIndices": [
+                                0,
+                                2,
+                                3
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 1328,
+                                "endIndex": 1436,
+                                "text": "若解除契約顯失公平，則僅能請求減少價金，但假貨通常足以構成解除契約的理由"
+                            },
+                            "groundingChunkIndices": [
+                                2
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 1542,
+                                "endIndex": 1757,
+                                "text": "*   **損害賠償**：若賣家故意不告知商品為假貨，或商品缺少其所保證的品質，您除了可以解除契約或減少價金外，還可以依《民法》第360條請求不履行之損害賠償"
+                            },
+                            "groundingChunkIndices": [
+                                3
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 1760,
+                                "endIndex": 1868,
+                                "text": "此外，若因使用仿冒品導致身體受損害，亦可請求醫藥費、精神慰撫金等損害賠償"
+                            },
+                            "groundingChunkIndices": [
+                                4
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 2043,
+                                "endIndex": 2112,
+                                "text": "但若賣家故意不告知瑕疵，則不受六個月期間的限制"
+                            },
+                            "groundingChunkIndices": [
+                                5
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 2121,
+                                "endIndex": 2395,
+                                "text": "**消費者保護法（特別法優先適用）**\n    *   **7日鑑賞期**：由於是網路購物，屬於《消費者保護法》所稱的「通訊交易」，您享有收到商品後7日內無條件解除契約的權利，無須說明理由及負擔任何費用或對價"
+                            },
+                            "groundingChunkIndices": [
+                                6,
+                                7,
+                                8,
+                                9,
+                                10
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 2398,
+                                "endIndex": 2483,
+                                "text": "即使超過7天，若能證明是假貨，仍可透過其他法律途徑主張權利"
+                            },
+                            "groundingChunkIndices": [
+                                4,
+                                8
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 2610,
+                                "endIndex": 2712,
+                                "text": "消保法對企業經營者課予更嚴格的責任，包括商品或服務的安全性、真實性等"
+                            },
+                            "groundingChunkIndices": [
+                                10
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 2720,
+                                "endIndex": 2938,
+                                "text": "*   **懲罰性賠償金**：若企業經營者故意販售仿冒品，消費者可請求損害額五倍以下的懲罰性賠償金；若是因重大過失，可請求三倍以下；因過失，則可請求一倍以下"
+                            },
+                            "groundingChunkIndices": [
+                                11
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 2947,
+                                "endIndex": 3128,
+                                "text": "**證據蒐集**\n    *   保留所有交易紀錄：訂單、付款證明、與賣家的對話紀錄（訊息、語音）、商品頁面截圖、假貨照片或影片、貨運單等"
+                            },
+                            "groundingChunkIndices": [
+                                6,
+                                12,
+                                11,
+                                13,
+                                14
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 3136,
+                                "endIndex": 3218,
+                                "text": "*   切勿拆封或使用假貨：盡可能保持商品原狀，以利作為證據"
+                            },
+                            "groundingChunkIndices": [
+                                11
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 3226,
+                                "endIndex": 3290,
+                                "text": "*   若有疑慮，可尋求專業鑑定證明商品為仿冒品"
+                            },
+                            "groundingChunkIndices": [
+                                6
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 3386,
+                                "endIndex": 3641,
+                                "text": "**詐欺罪**\n    *   **普通詐欺罪**：《刑法》第339條第1項規定，意圖為自己或第三人不法之所有，以詐術使人將本人或第三人之物交付者，處五年以下有期徒刑、拘役或科或併科五十萬元以下罰金"
+                            },
+                            "groundingChunkIndices": [
+                                15,
+                                16,
+                                17
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 3649,
+                                "endIndex": 3913,
+                                "text": "*   **加重詐欺罪**：《刑法》第339條之4規定，若詐欺行為是透過網路、電子通訊或其他媒體等傳播工具對公眾散布而犯之，則構成加重詐欺罪，處一年以上七年以下有期徒刑，得併科一百萬元以下罰金"
+                            },
+                            "groundingChunkIndices": [
+                                16,
+                                17,
+                                18,
+                                8,
+                                10
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 3921,
+                                "endIndex": 4097,
+                                "text": "*   **構成要件**：賣家明知商品為假貨卻謊稱正品販售，使您陷於錯誤而支付價金，即符合詐欺罪的「締約詐欺」或「履約詐欺」要件"
+                            },
+                            "groundingChunkIndices": [
+                                16,
+                                8,
+                                19,
+                                20
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 4105,
+                                "endIndex": 4257,
+                                "text": "*   **報案**：您可以攜帶相關事證（如訂單、金流記錄、商品照片等）到住家附近的警察局報案，檢舉仿冒品的來源"
+                            },
+                            "groundingChunkIndices": [
+                                11
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 4260,
+                                "endIndex": 4338,
+                                "text": "報案時應明確表示要提起刑事告訴，並提供詳細的犯罪事實"
+                            },
+                            "groundingChunkIndices": [
+                                13
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 4347,
+                                "endIndex": 4648,
+                                "text": "**商標法**\n    *   **商標侵權罪**：根據《商標法》第97條規定，未經商標權人同意，為行銷目的而使用相同或近似於註冊商標的商品，有致相關消費者混淆誤認之虞者，處三年以下有期徒刑、拘役或科或併科新台幣二十萬以下罰金"
+                            },
+                            "groundingChunkIndices": [
+                                4,
+                                7,
+                                8,
+                                21,
+                                11,
+                                20
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 4656,
+                                "endIndex": 4805,
+                                "text": "*   **販賣仿冒品**：明知是仿冒品而販賣，或意圖販賣而持有、陳列、輸出或輸入者，亦構成商標法上的刑事責任"
+                            },
+                            "groundingChunkIndices": [
+                                21,
+                                11,
+                                22
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 4956,
+                                "endIndex": 5072,
+                                "text": "若對商品真偽有疑慮，可向保智大隊檢舉，請其協助鑑定商品真偽，檢舉專線為0800-016597"
+                            },
+                            "groundingChunkIndices": [
+                                11
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 5080,
+                                "endIndex": 5190,
+                                "text": "*   **消費者購買自用**：一般而言，消費者單純購買仿冒品自用，並無刑事責任疑慮"
+                            },
+                            "groundingChunkIndices": [
+                                23
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 5193,
+                                "endIndex": 5289,
+                                "text": "但若明知是假貨卻仍轉售他人獲利，則可能構成商標法之販賣仿冒商品罪"
+                            },
+                            "groundingChunkIndices": [
+                                23
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 5409,
+                                "endIndex": 5616,
+                                "text": "**行政院消費者保護會（消保會）**\n    *   **申訴與調解**：若與賣家協商無果，您可以向直轄市、縣（市）政府的消費者服務中心（撥打1950）諮詢或提出申訴"
+                            },
+                            "groundingChunkIndices": [
+                                24,
+                                4,
+                                7,
+                                12,
+                                25,
+                                10
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 5624,
+                                "endIndex": 5749,
+                                "text": "*   **線上申訴**：行政院消費者保護會已建置「線上申訴與調解」系統，您可上網提起消費申訴"
+                            },
+                            "groundingChunkIndices": [
+                                24,
+                                26,
+                                25
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 5866,
+                                "endIndex": 6079,
+                                "text": "若未獲妥適處理，可向直轄市、縣（市）政府之消費者保護官提出第二次申訴；如仍未獲妥適處理，還可以向直轄市、縣(市) 政府之消費爭議調解委員會申請調解"
+                            },
+                            "groundingChunkIndices": [
+                                24,
+                                7
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 6087,
+                                "endIndex": 6218,
+                                "text": "*   **民間團體**：亦可向民間的消費者保護團體，例如消費者文教基金會或台灣消費者保護協會申訴"
+                            },
+                            "groundingChunkIndices": [
+                                24,
+                                27,
+                                28
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 6227,
+                                "endIndex": 6406,
+                                "text": "**公平交易委員會**\n    *   **廣告不實**：若賣家在商品廣告中宣稱不實內容（例如宣稱正品但實為假貨），可能涉及違反《公平交易法》"
+                            },
+                            "groundingChunkIndices": [
+                                29
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 6409,
+                                "endIndex": 6457,
+                                "text": "公平會可對廣告不實的業者處以罰鍰"
+                            },
+                            "groundingChunkIndices": [
+                                29
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 6590,
+                                "endIndex": 6816,
+                                "text": "**經濟部智慧財產局**\n    *   雖然智慧財產局主要負責商標註冊與管理，但消費者若發現仿冒品，其檢舉資訊可作為智慧財產局或相關執法機關（如海關）查緝仿冒品的線索"
+                            },
+                            "groundingChunkIndices": [
+                                0,
+                                30
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 6854,
+                                "endIndex": 7039,
+                                "text": "*   **購物平台申訴**：若您是在蝦皮、PChome、露天等第三方交易平台購買，應優先利用平台的爭議處理機制，通常平台會提供退貨退款的協助"
+                            },
+                            "groundingChunkIndices": [
+                                12,
+                                13,
+                                29
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 7042,
+                                "endIndex": 7130,
+                                "text": "許多平台設有保障機制，避免私下匯款或LINE交易，以確保交易安全"
+                            },
+                            "groundingChunkIndices": [
+                                13
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 7134,
+                                "endIndex": 7280,
+                                "text": "*   **貨運業者協助**：若採貨到付款方式，收到假貨後可向負責運送的宅配業者反映，請其協助辦理退貨、退款"
+                            },
+                            "groundingChunkIndices": [
+                                31,
+                                10
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 7284,
+                                "endIndex": 7460,
+                                "text": "*   **信用卡止付**：若是透過信用卡付款，可以向發卡銀行提出爭議申請，要求停止支付相關款項，這是一個保護資金的臨時解決辦法"
+                            },
+                            "groundingChunkIndices": [
+                                12
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 7464,
+                                "endIndex": 7634,
+                                "text": "*   **法律諮詢**：若情況複雜或不確定如何處理，建議尋求專業法律意見，例如律師或法律扶助基金會，以獲得最適切的解決方案"
+                            },
+                            "groundingChunkIndices": [
+                                12
+                            ]
+                        },
+                        {
+                            "segment": {
+                                "startIndex": 7638,
+                                "endIndex": 7817,
+                                "text": "*   **保持警覺**：在網路購物時，應選擇有信譽的平台和賣家，並對明顯低於市價的商品保持警惕，避免因一時的方便或便宜而買到假貨"
+                            },
+                            "groundingChunkIndices": [
+                                8,
+                                11
+                            ]
+                        }
+                    ],
+                    "webSearchQueries": [
+                        "台灣 網購 假貨 退款 法律",
+                        "台灣 網購 詐欺 提告",
+                        "台灣 消費者保護法 網購 假貨",
+                        "台灣 民法 買賣 瑕疵擔保 假貨",
+                        "台灣 刑法 詐欺罪 網購",
+                        "台灣 商標法 仿冒品 購買者",
+                        "行政院消費者保護會 申訴 流程",
+                        "公平交易委員會 網購 假貨",
+                        "網路購物 糾紛 處理 流程 台灣",
+                        "網購 收到 假貨 經驗分享 台灣"
+                    ]
+                }
+            }
     ]
 }
 
