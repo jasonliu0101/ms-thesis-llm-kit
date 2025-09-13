@@ -1934,33 +1934,28 @@ class StreamingChatApp {
                 return existingReferences; // 返回原始引用數據
             }
 
-            // 計算需要補充的引用數量
-            const currentCount = existingReferences ? existingReferences.length : 0;
-            const targetCount = 10;
-            const needCount = Math.max(0, targetCount - currentCount);
-            
-            // 選擇虛擬引用
-            const selectedVirtualReferences = virtualData.references.slice(0, needCount);
+            // 使用所有的虛擬引用（不再限制數量）
+            const selectedVirtualReferences = virtualData.references;
             
             // 轉換為標準格式並添加虛擬引用標記
             const formattedReferences = selectedVirtualReferences.map(ref => ({
                 web: {
-                    title: ref.title,
-                    uri: ref.uri
+                    title: ref.web.title,
+                    uri: ref.web.uri
                 },
                 virtual: true,        // 明確標記為虛擬引用
                 isVirtual: true,      // 備用標記
                 type: 'virtual',      // 類型標記
-                category: questionCategory  // 類別標記
+                category: questionCategory,  // 類別標記
+                referenceId: ref.referenceId // 保留後端生成的識別碼
             }));
 
-            // 合併現有引用和虛擬引用
-            const enhancedReferences = [
-                ...(existingReferences || []),
-                ...formattedReferences
-            ];
+            // 如果有現有引用，合併；否則只使用虛擬引用
+            const enhancedReferences = existingReferences && existingReferences.length > 0 
+                ? [...existingReferences, ...formattedReferences]
+                : formattedReferences;
 
-            console.log(`✅ 虛擬引用增強完成：原有 ${currentCount} 個，新增 ${selectedVirtualReferences.length} 個虛擬引用`);
+            console.log(`✅ 虛擬引用增強完成：原有 ${existingReferences ? existingReferences.length : 0} 個，新增 ${selectedVirtualReferences.length} 個虛擬引用`);
 
             // 顯示增強後的引用
             this.displayEnhancedReferences(enhancedReferences, responseDiv, selectedVirtualReferences.length);
@@ -2003,33 +1998,28 @@ class StreamingChatApp {
                 return existingReferences; // 返回原始引用數據
             }
 
-            // 計算需要補充的引用數量
-            const currentCount = existingReferences ? existingReferences.length : 0;
-            const targetCount = 10;
-            const needCount = Math.max(0, targetCount - currentCount);
-            
-            // 選擇虛擬引用
-            const selectedVirtualReferences = virtualData.references.slice(0, needCount);
+            // 使用所有的虛擬引用（不再限制數量）
+            const selectedVirtualReferences = virtualData.references;
             
             // 轉換為標準格式並添加虛擬引用標記
             const formattedReferences = selectedVirtualReferences.map(ref => ({
                 web: {
-                    title: ref.title,
-                    uri: ref.uri
+                    title: ref.web.title,
+                    uri: ref.web.uri
                 },
                 virtual: true,        // 明確標記為虛擬引用
                 isVirtual: true,      // 備用標記
                 type: 'virtual',      // 類型標記
-                category: questionCategory  // 類別標記
+                category: questionCategory,  // 類別標記
+                referenceId: ref.referenceId // 保留後端生成的識別碼
             }));
 
-            // 合併現有引用和虛擬引用
-            const enhancedReferences = [
-                ...(existingReferences || []),
-                ...formattedReferences
-            ];
+            // 如果有現有引用，合併；否則只使用虛擬引用
+            const enhancedReferences = existingReferences && existingReferences.length > 0 
+                ? [...existingReferences, ...formattedReferences]
+                : formattedReferences;
 
-            console.log(`✅ [數據處理] 虛擬引用增強完成：原有 ${currentCount} 個，新增 ${selectedVirtualReferences.length} 個虛擬引用`);
+            console.log(`✅ [數據處理] 虛擬引用增強完成：原有 ${existingReferences ? existingReferences.length : 0} 個，新增 ${selectedVirtualReferences.length} 個虛擬引用`);
             
             // 只返回數據，不顯示
             return enhancedReferences;
@@ -2058,33 +2048,28 @@ class StreamingChatApp {
                 return existingReferences; // 返回原始引用數據
             }
 
-            // 計算需要補充的引用數量
-            const currentCount = existingReferences ? existingReferences.length : 0;
-            const targetCount = 10;
-            const needCount = Math.max(0, targetCount - currentCount);
-            
-            // 選擇虛擬引用
-            const selectedVirtualReferences = virtualData.references.slice(0, needCount);
+            // 使用所有的虛擬引用（不再限制數量）
+            const selectedVirtualReferences = virtualData.references;
             
             // 轉換為標準格式並添加虛擬引用標記
             const formattedReferences = selectedVirtualReferences.map(ref => ({
                 web: {
-                    title: ref.title,
-                    uri: ref.uri
+                    title: ref.web.title,
+                    uri: ref.web.uri
                 },
                 virtual: true,        // 明確標記為虛擬引用
                 isVirtual: true,      // 備用標記
                 type: 'virtual',      // 類型標記
-                category: virtualData.category  // 類別標記
+                category: virtualData.category,  // 類別標記
+                referenceId: ref.referenceId     // 保留後端生成的識別碼
             }));
 
-            // 合併現有引用和虛擬引用
-            const enhancedReferences = [
-                ...(existingReferences || []),
-                ...formattedReferences
-            ];
+            // 如果有現有引用，合併；否則只使用虛擬引用
+            const enhancedReferences = existingReferences && existingReferences.length > 0 
+                ? [...existingReferences, ...formattedReferences]
+                : formattedReferences;
 
-            console.log(`✅ [同步增強] 虛擬引用增強完成：原有 ${currentCount} 個，新增 ${selectedVirtualReferences.length} 個虛擬引用`);
+            console.log(`✅ [同步增強] 虛擬引用增強完成：原有 ${existingReferences ? existingReferences.length : 0} 個，新增 ${selectedVirtualReferences.length} 個虛擬引用`);
 
             // 顯示增強後的引用
             this.displayEnhancedReferences(enhancedReferences, responseDiv, selectedVirtualReferences.length);
