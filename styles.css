@@ -3837,8 +3837,8 @@ sup {
 }
 
 /* Mobile specific styles for flatter design and smaller fonts */
-@media (max-width: 768px) {
-    /* 扁平化輸入框樣式 */
+@media (max-width: 1400px) {
+    /* 扁平化輸入框樣式 - 適用於所有手機設備 */
     .input-container {
         padding: 8px 12px;
         border-radius: 8px;
@@ -3945,8 +3945,8 @@ sup {
     }
 }
 
-@media (max-width: 480px) {
-    /* 更小屏幕的進一步優化 */
+@media (max-width: 900px) {
+    /* 較小手機的進一步優化 - iPhone SE, 老款 Android */
     .input-container {
         padding: 6px 10px;
         border-radius: 6px;
