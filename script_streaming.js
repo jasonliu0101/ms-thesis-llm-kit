@@ -1446,8 +1446,14 @@ class StreamingChatApp {
             </div>
         `;
 
-        // 將引用區塊添加到答案容器後面
-        answerContainer.appendChild(referencesSection);
+        // 將引用區塊添加到整個 messageContent，而不是答案容器內部
+        const messageContent = document.querySelector('.message-content') || document.querySelector('.message.ai-message');
+        if (messageContent) {
+            messageContent.appendChild(referencesSection);
+        } else {
+            // 如果找不到 messageContent，回退到原來的行為
+            answerContainer.appendChild(referencesSection);
+        }
         
         console.log(`✅ 成功注入 ${references.length} 個模擬引用`);
 
@@ -2137,9 +2143,9 @@ class StreamingChatApp {
             </div>
         `;
 
-        // 添加到回應容器
-        const answerSection = responseDiv.querySelector('.answer-section') || responseDiv.querySelector('.answer-content') || responseDiv;
-        answerSection.appendChild(referencesSection);
+        // 添加到整個回應容器的 messageContent，而不是 answerSection 內部
+        const messageContent = responseDiv.querySelector('.message-content') || responseDiv;
+        messageContent.appendChild(referencesSection);
 
         // 不顯示虛擬引用的特殊通知，保持一致性
         console.log(`✅ 顯示引用來源：${references.length} 個來源（其中 ${virtualCount} 個為增強引用，但外觀完全一致）`);
@@ -2348,6 +2354,16 @@ class StreamingChatApp {
                         請記下此識別碼，用於問卷填寫和後續追蹤
                     </p>
                 </div>
+                <div class="survey-return-notice">
+                    <i class="fas fa-external-link-alt"></i>
+                    <span>點擊以下連結，即可返回問卷繼續填答：</span>
+                    <a href="https://www.surveycake.com/s/XYOg0" target="_blank" class="survey-link">
+                        https://www.surveycake.com/s/XYOg0
+                    </a>
+                    <div class="survey-note">
+                        如果遇到問卷網頁跳轉回歡迎頁面，請點擊「開始後繼續填答即可
+                    </div>
+                </div>
             `;
             
             // 確保識別碼始終在最下方：使用强制排序
@@ -2423,6 +2439,16 @@ class StreamingChatApp {
                         <span class="copy-btn-text">複製識別碼</span>
                     </button>
                 </div>
+                <div class="survey-return-notice">
+                    <i class="fas fa-external-link-alt"></i>
+                    <span>點擊以下連結，即可返回問卷繼續填答：</span>
+                    <a href="https://www.surveycake.com/s/XYOg0" target="_blank" class="survey-link">
+                        https://www.surveycake.com/s/XYOg0
+                    </a>
+                    <div class="survey-note">
+                        如果遇到問卷網頁跳轉回歡迎頁面，請點擊「開始」後繼續填答即可
+                    </div>
+                </div>
             `;
             
             // 確保識別碼在回答區之後顯示
@@ -2433,31 +2459,37 @@ class StreamingChatApp {
         }
     }
 
-    // 確保識別碼在回答區之後（答案、引用來源之後）
+    // 確保識別碼在回答區之後，但在引用來源之前
     ensureSessionCodeBelowAnswer(messageContent, sessionDiv) {
         console.log('🔧 [Case C] ensureSessionCodeBelowAnswer 開始');
         
         const place = () => {
             const references = messageContent.querySelector('.references-section');
             const response = messageContent.querySelector('.response-section');
-            const anchor = references || response;
 
             // 先移除舊的識別碼（支援兩種不同的 CSS 類名）
             messageContent.querySelectorAll('.session-code-section, .session-id-display')
                 .forEach(n => {
                     if (n !== sessionDiv) { // 避免移除要插入的元素
                         n.remove();
-                        console.log('�️ 移除舊識別碼');
+                        console.log('🗑️ 移除舊識別碼');
                     }
                 });
 
-            if (anchor && anchor.nextSibling) {
-                anchor.parentNode.insertBefore(sessionDiv, anchor.nextSibling);
-                console.log('✅ 識別碼已插入到', anchor.className, '之後');
+            // 如果存在引用來源，將識別碼插入到引用來源之前
+            if (references && response) {
+                response.parentNode.insertBefore(sessionDiv, references);
+                console.log('✅ 識別碼已插入到回答區之後，引用來源之前');
                 return true;
-            } else if (anchor) {
-                anchor.parentNode.appendChild(sessionDiv);
-                console.log('✅ 識別碼已附加到', anchor.className, '之後');
+            } 
+            // 如果只有回答區，將識別碼插入到回答區之後
+            else if (response && response.nextSibling) {
+                response.parentNode.insertBefore(sessionDiv, response.nextSibling);
+                console.log('✅ 識別碼已插入到回答區之後');
+                return true;
+            } else if (response) {
+                response.parentNode.appendChild(sessionDiv);
+                console.log('✅ 識別碼已附加到回答區之後');
                 return true;
             } else {
                 // 回答區還沒生出來，先暫緩
@@ -2646,6 +2678,16 @@ class StreamingChatApp {
                     <i class="fas fa-copy"></i>
                     <span class="copy-btn-text">複製識別碼</span>
                 </button>
+            </div>
+            <div class="survey-return-notice">
+                <i class="fas fa-external-link-alt"></i>
+                <span>點擊以下連結，即可返回問卷繼續填答：</span>
+                <a href="https://www.surveycake.com/s/XYOg0" target="_blank" class="survey-link">
+                    https://www.surveycake.com/s/XYOg0
+                </a>
+                <div class="survey-note">
+                    如果遇到問卷網頁跳轉回歡迎頁面，請點擊「開始」後繼續填答即可
+                </div>
             </div>
         `;
         
