@@ -2688,10 +2688,10 @@ async function handleVirtualReferencesRequest(request, env) {
     const shuffledReferences = [...references].sort(() => Math.random() - 0.5);
     const selectedReferences = shuffledReferences.slice(0, selectedCount);
     
-    // 為每個引用生成隨機的識別碼末二位
+    // 為每個引用生成基於總數量的識別碼末二位
     const enhancedReferences = selectedReferences.map((ref, index) => {
-      // 生成隨機的末二位數字 (01-99)
-      const randomSuffix = String(Math.floor(Math.random() * 99) + 1).padStart(2, '0');
+      // 識別碼末二位應該是總引用數量
+      const totalCountSuffix = String(selectedCount).padStart(2, '0');
       
       return {
         ...ref,
@@ -2699,11 +2699,11 @@ async function handleVirtualReferencesRequest(request, env) {
         web: {
           ...ref.web,
           uri: ref.web.uri.includes('?') 
-            ? `${ref.web.uri}&ref_id=${randomSuffix}` 
-            : `${ref.web.uri}?ref_id=${randomSuffix}`
+            ? `${ref.web.uri}&ref_id=${totalCountSuffix}` 
+            : `${ref.web.uri}?ref_id=${totalCountSuffix}`
         },
         // 添加識別碼字段以便前端使用
-        referenceId: `VR${category.substring(0, 2)}${randomSuffix}`
+        referenceId: `VR${category.substring(0, 2)}${totalCountSuffix}`
       };
     });
 
