@@ -228,15 +228,30 @@
             const timestamp = Date.now();
             const random = Math.random();
             
-            // 結合時間戳和隨機數來決定分配
-            const shouldUseCaseA = (timestamp + Math.floor(random * 1000)) % 2 === 0;
+            // 結合時間戳和隨機數來決定分配（四元分配）
+            const caseIndex = (timestamp + Math.floor(random * 1000)) % 4;
             
-            const assignedCase = shouldUseCaseA ? 'Case A' : 'Case B';
-            const redirectUrl = shouldUseCaseA 
-                ? 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-a.html'
-                : 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-b.html';
+            let assignedCase, redirectUrl;
+            switch (caseIndex) {
+                case 0:
+                    assignedCase = 'Case C';
+                    redirectUrl = 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-c.html';
+                    break;
+                case 1:
+                    assignedCase = 'Case D';
+                    redirectUrl = 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-d.html';
+                    break;
+                case 2:
+                    assignedCase = 'Case E';
+                    redirectUrl = 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-e.html';
+                    break;
+                case 3:
+                    assignedCase = 'Case F';
+                    redirectUrl = 'https://jasonliu0101.github.io/ms-thesis-llm-kit/case-f.html';
+                    break;
+            }
             
-            console.log(`🎲 本地分配結果: ${assignedCase}`);
+            console.log(`🎲 本地分配結果: ${assignedCase} (索引: ${caseIndex})`);
             
             document.getElementById('statusText').textContent = '本地載入完成！正在進入系統...';
             document.getElementById('errorMessage').style.display = 'none';
