@@ -324,7 +324,7 @@ class StreamingChatApp {
                     continue; // 重試
                 } else {
                     console.log('❌ 非重試錯誤或重試次數已達上限，顯示錯誤訊息');
-                    this.addErrorMessage('抱歉，發生了錯誤。請稍後再試。');
+                    this.addErrorMessage('抱歉，發生了錯誤，請重新送出問題！（此為系統錯誤，不須納入問卷填答時的評價考量）');
                     break;
                 }
             }
