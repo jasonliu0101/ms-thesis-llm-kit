@@ -114,12 +114,18 @@ open http://localhost:8080
 - **Progressive Web App**: 支持離線使用與安裝
 
 ### 後端服務
-- **Google Gemini API**: 核心 AI 能力
-- **Cloudflare Workers**: 可選的 API 代理服務
+- **Google Vertex AI**: 企業級 AI 平台，提供 Gemini 2.5 Flash 模型
+- **Cloudflare Workers**: 高性能邊緣運算 API 服務
 - **GitHub Pages**: 靜態網站託管
 
+### API 架構
+- **Vertex AI Endpoints**: 
+  - Project: `gen-lang-client-0481163611`
+  - Location: `europe-west1`
+  - 認證: Bearer Token (Service Account)
+
 ### 安全特性
-- **本地存儲**: API Key 僅存儲在用戶本地
+- **Google Cloud 認證**: 基於 Service Account 的安全認證
 - **HTTPS 加密**: 全站 HTTPS 保護
 - **無追蹤設計**: 不收集用戶數據
 

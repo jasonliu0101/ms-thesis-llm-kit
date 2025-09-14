@@ -28,11 +28,16 @@ export default {
   }
 };
 
-// 新增：簡化的 Gemini API 調用函數（作為最後的備用）
+// 新增：簡化的 Vertex AI API 調用函數（作為最後的備用）
 async function callSimplifiedGeminiAPI(question, env) {
-  console.log('🔧 執行簡化 Gemini API 調用...');
+  console.log('🔧 執行簡化 Vertex AI API 調用...');
   
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${env.GEMINI_API_KEY}`;
+  // Vertex AI endpoint configuration for simplified API
+  const PROJECT_ID = 'gen-lang-client-0481163611';
+  const LOCATION = 'europe-west1';
+  const MODEL_ID = 'gemini-1.5-flash';
+  
+  const url = `https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL_ID}:generateContent`;
   
   const payload = {
     contents: [{
@@ -48,35 +53,36 @@ async function callSimplifiedGeminiAPI(question, env) {
     }
   };
 
-  console.log('🔧 簡化 API 請求 payload:', JSON.stringify(payload, null, 2));
+  console.log('🔧 簡化 Vertex AI API 請求 payload:', JSON.stringify(payload, null, 2));
 
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${env.GEMINI_API_KEY}`,  // Vertex AI 使用 Bearer token 認證
     },
     body: JSON.stringify(payload)
   });
 
-  console.log('🔧 簡化 API 響應狀態:', response.status);
+  console.log('🔧 簡化 Vertex AI API 響應狀態:', response.status);
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ 簡化 API 錯誤響應:', errorText);
-    throw new Error(`簡化 Gemini API 失敗 (${response.status}): ${errorText}`);
+    console.error('❌ 簡化 Vertex AI API 錯誤響應:', errorText);
+    throw new Error(`簡化 Vertex AI API 失敗 (${response.status}): ${errorText}`);
   }
 
   const result = await response.json();
-  console.log('✅ 簡化 API 成功響應:', JSON.stringify(result, null, 2));
+  console.log('✅ 簡化 Vertex AI API 成功響應:', JSON.stringify(result, null, 2));
 
   if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
     return {
       success: true,
       answer: result.candidates[0].content.parts[0].text,
-      source: "Gemini (簡化模式)"
+      source: "Vertex AI (簡化模式)"
     };
   } else {
-    throw new Error('簡化 API 響應格式異常');
+    throw new Error('簡化 Vertex AI API 響應格式異常');
   }
 }
 
@@ -590,12 +596,12 @@ async function processStreamingResponse(question, env, writer, encoder, options)
 
 // 調用 Gemini 串流 API
 async function callStreamingGeminiAPI(question, env, withSearch = true) {
-  const apiKey = env.GEMINI_API_KEY;
+  const apiKey = env.GEMINI_API_KEY; // 現在應該是 Google Cloud Service Account Token
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not configured');
+    throw new Error('GEMINI_API_KEY not configured - 需要 Google Cloud 認證 token');
   }
 
-  console.log(`=== 開始 Gemini 串流 API 調用 (withSearch: ${withSearch}) ===`);
+  console.log(`=== 開始 Vertex AI 串流 API 調用 (withSearch: ${withSearch}) ===`);
 
   // 構建請求體
   const requestBody = {
@@ -663,15 +669,21 @@ async function callStreamingGeminiAPI(question, env, withSearch = true) {
 
   console.log('📋 請求體:', JSON.stringify(requestBody, null, 2));
 
-  // 使用串流 API 端點，加上 alt=sse 參數
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+  // Vertex AI streaming endpoint configuration
+  const PROJECT_ID = 'gen-lang-client-0481163611';
+  const LOCATION = 'europe-west1';
+  const MODEL_ID = 'gemini-2.5-flash';
   
-  console.log('🌐 請求 URL:', url.replace(apiKey, 'API_KEY_HIDDEN'));
+  // 使用 Vertex AI 串流端點
+  const url = `https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL_ID}:streamGenerateContent?alt=sse`;
+  
+  console.log('🌐 Vertex AI 串流請求 URL:', url);
   
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,  // Vertex AI 使用 Bearer token 認證
       'Accept': 'text/event-stream'
     },
     body: JSON.stringify(requestBody)
@@ -939,12 +951,12 @@ async function callGoogleTranslator(text, target, source, env) {
 
 // 調用 Gemini API
 async function callGeminiAPI(question, env, withSearch = true, customThinkingBudget = null) {
-  const apiKey = env.GEMINI_API_KEY;
+  const apiKey = env.GEMINI_API_KEY; // 現在應該是 Google Cloud Service Account Token 或 Application Default Credentials
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not configured');
+    throw new Error('GEMINI_API_KEY not configured - 需要 Google Cloud 認證 token');
   }
 
-  console.log(`=== 開始 Gemini API 調用 (withSearch: ${withSearch}) ===`);
+  console.log(`=== 開始 Vertex AI API 調用 (withSearch: ${withSearch}) ===`);
   
   // 確定使用的 thinking budget
   const thinkingBudget = customThinkingBudget || 24576;
@@ -1024,14 +1036,21 @@ async function callGeminiAPI(question, env, withSearch = true, customThinkingBud
   // 記錄完整請求體
   console.log('📋 請求體:', JSON.stringify(requestBody, null, 2));
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  // Vertex AI endpoint configuration
+  const PROJECT_ID = 'gen-lang-client-0481163611';
+  const LOCATION = 'europe-west1';
+  const MODEL_ID = 'gemini-2.5-flash';
   
-  console.log('🌐 請求 URL:', url.replace(apiKey, 'API_KEY_HIDDEN'));
+  // 使用 Vertex AI 端點
+  const url = `https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL_ID}:generateContent`;
+  
+  console.log('🌐 Vertex AI 請求 URL:', url);
   
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,  // Vertex AI 使用 Bearer token 認證
     },
     body: JSON.stringify(requestBody)
   });
