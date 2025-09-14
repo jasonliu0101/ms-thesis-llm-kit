@@ -274,7 +274,7 @@ class StreamingChatApp {
         
         this.updateSendButtonState();
 
-        // 顯示用戶消息
+        // 顯示用戶消息（只顯示一次）
         this.addUserMessage(question);
 
         // 清空輸入框
@@ -282,16 +282,57 @@ class StreamingChatApp {
         this.autoResizeTextarea();
 
         let responseDiv = null;
-        try {
-            responseDiv = await this.startStreamingResponse(question);
-        } catch (error) {
-            console.error('回應錯誤:', error);
-            this.addErrorMessage('抱歉，發生了錯誤。請稍後再試。');
-        } finally {
-            // 識別碼已經在思考結束時顯示，這裡不需要再顯示
-            this.isStreaming = false;
-            this.updateSendButtonState();
+        let retryCount = 0;
+        const maxRetries = 1; // 最多重試1次
+
+        while (retryCount <= maxRetries) {
+            try {
+                console.log(`🔄 開始處理問題 (嘗試 ${retryCount + 1}/${maxRetries + 1})`);
+                responseDiv = await this.startStreamingResponse(question);
+                
+                // 檢查是否出現"沒有符合顯示條件的回答內容"錯誤
+                const answerContainer = responseDiv.querySelector('.answer-section, .response-section .response-content');
+                if (answerContainer && answerContainer.innerHTML.includes('沒有符合顯示條件的回答內容')) {
+                    if (retryCount < maxRetries) {
+                        console.log('⚠️ 檢測到無內容錯誤，自動重試...');
+                        retryCount++;
+                        // 移除之前的錯誤響應
+                        if (responseDiv && responseDiv.parentNode) {
+                            responseDiv.parentNode.removeChild(responseDiv);
+                        }
+                        continue; // 重試
+                    } else {
+                        console.log('❌ 重試次數已達上限，顯示系統錯誤');
+                        // 替換錯誤訊息
+                        answerContainer.innerHTML = '<div class="error-message">系統處理發生錯誤，請重新整理頁面後再試。</div>';
+                        break;
+                    }
+                } else {
+                    console.log('✅ 響應成功，無需重試');
+                    break; // 成功，跳出循環
+                }
+                
+            } catch (error) {
+                console.error('回應錯誤:', error);
+                
+                // 檢查是否為特定的 API 錯誤，需要重試
+                const isApiError = this.isRetryableApiError(error);
+                
+                if (isApiError && retryCount < maxRetries) {
+                    console.log('⚠️ 檢測到可重試的 API 錯誤，自動重試...');
+                    retryCount++;
+                    continue; // 重試
+                } else {
+                    console.log('❌ 非重試錯誤或重試次數已達上限，顯示錯誤訊息');
+                    this.addErrorMessage('抱歉，發生了錯誤。請稍後再試。');
+                    break;
+                }
+            }
         }
+
+        // 最終清理
+        this.isStreaming = false;
+        this.updateSendButtonState();
     }
 
     addUserMessage(message) {
@@ -3674,6 +3715,39 @@ class StreamingChatApp {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // 檢查是否為可重試的 API 錯誤
+    isRetryableApiError(error) {
+        if (!error || !error.message) return false;
+        
+        const errorMessage = error.message.toLowerCase();
+        
+        // 檢查常見的 API 錯誤模式
+        const retryablePatterns = [
+            // Gemini API 錯誤
+            /gemini.*api.*error.*5\d{2}/i,
+            /gemini.*streaming.*api.*error.*5\d{2}/i,
+            /524.*error code.*524/i,
+            /503.*service unavailable/i,
+            /502.*bad gateway/i,
+            /504.*gateway timeout/i,
+            /500.*internal server error/i,
+            
+            // 通用 API 錯誤
+            /internal server error/i,
+            /service unavailable/i,
+            /bad gateway/i,
+            /gateway timeout/i,
+            
+            // 網路相關錯誤
+            /network.*error/i,
+            /connection.*error/i,
+            /timeout/i,
+            /fetch.*failed/i
+        ];
+        
+        return retryablePatterns.some(pattern => pattern.test(errorMessage));
     }
 
     toggleThinkingSection(thinkingId) {
