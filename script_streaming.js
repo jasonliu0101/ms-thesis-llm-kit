@@ -299,6 +299,18 @@ class StreamingChatApp {
                 console.log(`🔄 開始處理問題 (嘗試 ${retryCount + 1}/${maxRetries + 1})`);
                 responseDiv = await this.startStreamingResponse(question);
                 
+                // 檢查 responseDiv 是否有效
+                if (!responseDiv) {
+                    console.error('❌ startStreamingResponse 返回了無效的 responseDiv');
+                    if (retryCount < maxRetries) {
+                        retryCount++;
+                        continue;
+                    } else {
+                        this.addErrorMessage('抱歉，發生了錯誤，請重新送出問題！（此為系統錯誤，不須納入問卷填答時的評價考量）');
+                        break;
+                    }
+                }
+                
                 // 檢查是否出現"沒有符合顯示條件的回答內容"錯誤
                 const answerContainer = responseDiv.querySelector('.answer-section, .response-section .response-content');
                 if (answerContainer && answerContainer.innerHTML.includes('沒有符合顯示條件的回答內容')) {
@@ -550,14 +562,26 @@ class StreamingChatApp {
         } catch (error) {
             console.error('Case D 串流錯誤:', error);
             
-            // 錯誤處理
-            const answerContainer = responseDiv.querySelector('.response-section .response-content');
-            if (answerContainer) {
-                answerContainer.innerHTML = `<div class="error-message">串流處理發生錯誤: ${error.message}</div>`;
+            // 錯誤處理 - 確保 responseDiv 存在
+            if (responseDiv) {
+                const answerContainer = responseDiv.querySelector('.response-section .response-content');
+                if (answerContainer) {
+                    answerContainer.innerHTML = `<div class="error-message">串流處理發生錯誤: ${error.message}</div>`;
+                }
+                
+                // 即使出錯也要返回 responseDiv
+                return responseDiv;
+            } else {
+                // 如果 responseDiv 不存在，創建一個簡單的錯誤響應容器
+                const errorResponseDiv = this.createResponseContainer();
+                const errorContainer = this.createAnswerContainer(errorResponseDiv);
+                errorContainer.innerHTML = `<div class="error-message">串流處理發生錯誤: ${error.message}</div>`;
+                return errorResponseDiv;
             }
-            
-            throw error;
         }
+        
+        // 確保總是返回 responseDiv
+        return responseDiv;
     }
 
     async startStreamingResponse(question) {
@@ -1721,12 +1745,22 @@ class StreamingChatApp {
         } catch (error) {
             console.error('❌ Case E 串流處理發生錯誤:', error);
             
-            const answerContainer = responseDiv.querySelector('.answer-section');
-            if (answerContainer) {
-                answerContainer.innerHTML = `<div class="error-message">Case E 串流處理發生錯誤: ${error.message}</div>`;
+            // 錯誤處理 - 確保 responseDiv 存在
+            if (responseDiv) {
+                const answerContainer = responseDiv.querySelector('.answer-section');
+                if (answerContainer) {
+                    answerContainer.innerHTML = `<div class="error-message">Case E 串流處理發生錯誤: ${error.message}</div>`;
+                }
+                
+                // 即使出錯也要返回 responseDiv
+                return responseDiv;
+            } else {
+                // 如果 responseDiv 不存在，創建一個簡單的錯誤響應容器
+                const errorResponseDiv = this.createResponseContainer();
+                const errorContainer = this.createAnswerContainer(errorResponseDiv);
+                errorContainer.innerHTML = `<div class="error-message">Case E 串流處理發生錯誤: ${error.message}</div>`;
+                return errorResponseDiv;
             }
-            
-            throw error;
         }
         
         return responseDiv;
@@ -1950,12 +1984,22 @@ class StreamingChatApp {
             // 確保移除載入提示
             this.removeSourceProcessingLoader(responseDiv);
             
-            const answerContainer = responseDiv.querySelector('.answer-section');
-            if (answerContainer) {
-                answerContainer.innerHTML = `<div class="error-message">Case F 串流處理發生錯誤: ${error.message}</div>`;
+            // 錯誤處理 - 確保 responseDiv 存在
+            if (responseDiv) {
+                const answerContainer = responseDiv.querySelector('.answer-section');
+                if (answerContainer) {
+                    answerContainer.innerHTML = `<div class="error-message">Case F 串流處理發生錯誤: ${error.message}</div>`;
+                }
+                
+                // 即使出錯也要返回 responseDiv
+                return responseDiv;
+            } else {
+                // 如果 responseDiv 不存在，創建一個簡單的錯誤響應容器
+                const errorResponseDiv = this.createResponseContainer();
+                const errorContainer = this.createAnswerContainer(errorResponseDiv);
+                errorContainer.innerHTML = `<div class="error-message">Case F 串流處理發生錯誤: ${error.message}</div>`;
+                return errorResponseDiv;
             }
-            
-            throw error;
         }
         
         return responseDiv;
