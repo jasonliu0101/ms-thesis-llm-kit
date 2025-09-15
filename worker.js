@@ -2,6 +2,8 @@ var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
 // worker.js
+var __defProp2 = Object.defineProperty;
+var __name2 = /* @__PURE__ */ __name((target, value) => __defProp2(target, "name", { value, configurable: true }), "__name");
 var worker_default = {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
@@ -69,6 +71,7 @@ async function callSimplifiedGeminiAPI(question, env) {
   }
 }
 __name(callSimplifiedGeminiAPI, "callSimplifiedGeminiAPI");
+__name2(callSimplifiedGeminiAPI, "callSimplifiedGeminiAPI");
 async function handleUserAssignment(request, env) {
   try {
     console.log("\u{1F3AF} \u6536\u5230\u4F7F\u7528\u8005\u5206\u914D\u8ACB\u6C42");
@@ -131,6 +134,7 @@ async function handleUserAssignment(request, env) {
   }
 }
 __name(handleUserAssignment, "handleUserAssignment");
+__name2(handleUserAssignment, "handleUserAssignment");
 async function handleTranslateRequest(request, env) {
   try {
     console.log("\u{1F30F} \u6536\u5230\u7FFB\u8B6F\u8ACB\u6C42\uFF0C\u958B\u59CB\u89E3\u6790...");
@@ -192,6 +196,7 @@ async function handleTranslateRequest(request, env) {
   }
 }
 __name(handleTranslateRequest, "handleTranslateRequest");
+__name2(handleTranslateRequest, "handleTranslateRequest");
 async function handleGeminiRequest(request, env) {
   try {
     const { question, enableSearch, showThinking, options, sessionId } = await request.json();
@@ -292,6 +297,7 @@ async function handleGeminiRequest(request, env) {
   }
 }
 __name(handleGeminiRequest, "handleGeminiRequest");
+__name2(handleGeminiRequest, "handleGeminiRequest");
 async function handleStreamingGeminiRequest(request, env) {
   try {
     const { question, enableSearch, showThinking, sessionId } = await request.json();
@@ -360,6 +366,7 @@ async function handleStreamingGeminiRequest(request, env) {
   }
 }
 __name(handleStreamingGeminiRequest, "handleStreamingGeminiRequest");
+__name2(handleStreamingGeminiRequest, "handleStreamingGeminiRequest");
 async function processStreamingResponse(question, env, writer, encoder, options) {
   const { enableSearch = true, showThinking = true } = options;
   try {
@@ -486,6 +493,7 @@ async function processStreamingResponse(question, env, writer, encoder, options)
   }
 }
 __name(processStreamingResponse, "processStreamingResponse");
+__name2(processStreamingResponse, "processStreamingResponse");
 async function callStreamingGeminiAPI(question, env, withSearch = true) {
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -572,6 +580,7 @@ async function callStreamingGeminiAPI(question, env, withSearch = true) {
   return response;
 }
 __name(callStreamingGeminiAPI, "callStreamingGeminiAPI");
+__name2(callStreamingGeminiAPI, "callStreamingGeminiAPI");
 async function handleDualGeminiAPI(question, env, options) {
   console.log("\u{1F680} \u958B\u59CB\u96D9\u91CD Gemini API \u8ABF\u7528");
   console.log("\u{1F4DD} \u554F\u984C:", question);
@@ -631,6 +640,7 @@ async function handleDualGeminiAPI(question, env, options) {
   }
 }
 __name(handleDualGeminiAPI, "handleDualGeminiAPI");
+__name2(handleDualGeminiAPI, "handleDualGeminiAPI");
 async function callTranslationWithFallback(text, target, source, env) {
   console.log("\u{1F504} \u958B\u59CB\u7FFB\u8B6F\u670D\u52D9\u5099\u63F4\u6D41\u7A0B");
   try {
@@ -652,6 +662,7 @@ async function callTranslationWithFallback(text, target, source, env) {
   }
 }
 __name(callTranslationWithFallback, "callTranslationWithFallback");
+__name2(callTranslationWithFallback, "callTranslationWithFallback");
 async function callAzureTranslator(text, target, source, env) {
   const apiKey = env.AZURE_TRANSLATOR_KEY;
   const region = env.AZURE_TRANSLATOR_REGION || "eastasia";
@@ -711,6 +722,7 @@ async function callAzureTranslator(text, target, source, env) {
   }
 }
 __name(callAzureTranslator, "callAzureTranslator");
+__name2(callAzureTranslator, "callAzureTranslator");
 async function callGoogleTranslator(text, target, source, env) {
   const apiKey = env.GOOGLE_CLOUD_API_KEY;
   if (!apiKey) {
@@ -766,6 +778,7 @@ async function callGoogleTranslator(text, target, source, env) {
   }
 }
 __name(callGoogleTranslator, "callGoogleTranslator");
+__name2(callGoogleTranslator, "callGoogleTranslator");
 async function callGeminiAPI(question, env, withSearch = true, customThinkingBudget = null) {
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -948,6 +961,7 @@ async function callGeminiAPI(question, env, withSearch = true, customThinkingBud
   return responseData;
 }
 __name(callGeminiAPI, "callGeminiAPI");
+__name2(callGeminiAPI, "callGeminiAPI");
 function createResponse(data) {
   console.log("\u{1F4E4} \u5B8C\u6574\u7B54\u6848\u5340 Response API \u6578\u64DA:", JSON.stringify(data, null, 2));
   return new Response(JSON.stringify(data), {
@@ -955,6 +969,7 @@ function createResponse(data) {
   });
 }
 __name(createResponse, "createResponse");
+__name2(createResponse, "createResponse");
 async function handleSampleDataRequest(request, env) {
   console.log("\u{1F4CA} \u8655\u7406\u7BC4\u4F8B\u6578\u64DA\u8ACB\u6C42...");
   try {
@@ -1104,6 +1119,7 @@ async function handleSampleDataRequest(request, env) {
   }
 }
 __name(handleSampleDataRequest, "handleSampleDataRequest");
+__name2(handleSampleDataRequest, "handleSampleDataRequest");
 async function handleVirtualReferencesRequest(request, env) {
   console.log("\u{1F4CA} \u8655\u7406\u865B\u64EC\u5F15\u7528\u6578\u64DA\u8ACB\u6C42...");
   try {
@@ -2450,6 +2466,7 @@ async function handleVirtualReferencesRequest(request, env) {
   }
 }
 __name(handleVirtualReferencesRequest, "handleVirtualReferencesRequest");
+__name2(handleVirtualReferencesRequest, "handleVirtualReferencesRequest");
 function handleCORS() {
   return new Response(null, {
     status: 200,
@@ -2457,6 +2474,7 @@ function handleCORS() {
   });
 }
 __name(handleCORS, "handleCORS");
+__name2(handleCORS, "handleCORS");
 function getCORSHeaders() {
   return {
     "Content-Type": "application/json",
@@ -2468,6 +2486,7 @@ function getCORSHeaders() {
   };
 }
 __name(getCORSHeaders, "getCORSHeaders");
+__name2(getCORSHeaders, "getCORSHeaders");
 export {
   worker_default as default
 };
