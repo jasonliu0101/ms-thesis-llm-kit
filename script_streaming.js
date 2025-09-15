@@ -312,24 +312,29 @@ class StreamingChatApp {
                 }
                 
                 // 檢查是否出現"沒有符合顯示條件的回答內容"錯誤
-                const answerContainer = responseDiv.querySelector('.answer-section, .response-section .response-content');
-                if (answerContainer && answerContainer.innerHTML.includes('沒有符合顯示條件的回答內容')) {
-                    if (retryCount < maxRetries) {
-                        console.log('⚠️ 檢測到無內容錯誤，自動重試...');
-                        retryCount++;
-                        // 移除之前的錯誤響應
-                        if (responseDiv && responseDiv.parentNode) {
-                            responseDiv.parentNode.removeChild(responseDiv);
+                if (responseDiv && responseDiv.querySelector) {
+                    const answerContainer = responseDiv.querySelector('.answer-section, .response-section .response-content');
+                    if (answerContainer && answerContainer.innerHTML.includes('沒有符合顯示條件的回答內容')) {
+                        if (retryCount < maxRetries) {
+                            console.log('⚠️ 檢測到無內容錯誤，自動重試...');
+                            retryCount++;
+                            // 移除之前的錯誤響應
+                            if (responseDiv && responseDiv.parentNode) {
+                                responseDiv.parentNode.removeChild(responseDiv);
+                            }
+                            continue; // 重試
+                        } else {
+                            console.log('❌ 重試次數已達上限，顯示系統錯誤');
+                            // 替換錯誤訊息
+                            answerContainer.innerHTML = '<div class="error-message">系統處理發生錯誤，請重新整理頁面後再試。</div>';
+                            break;
                         }
-                        continue; // 重試
                     } else {
-                        console.log('❌ 重試次數已達上限，顯示系統錯誤');
-                        // 替換錯誤訊息
-                        answerContainer.innerHTML = '<div class="error-message">系統處理發生錯誤，請重新整理頁面後再試。</div>';
-                        break;
+                        console.log('✅ 響應成功，無需重試');
+                        break; // 成功，跳出循環
                     }
                 } else {
-                    console.log('✅ 響應成功，無需重試');
+                    console.log('✅ 響應成功（無需檢查內容），無需重試');
                     break; // 成功，跳出循環
                 }
                 
@@ -369,9 +374,19 @@ class StreamingChatApp {
                 <div class="message-text">${this.escapeHtml(message)}</div>
             </div>
         `;
-        
-        this.chatContainer.appendChild(messageDiv);
-        this.scrollToBottom();
+
+        // 檢查 chatContainer 是否存在
+        if (!this.chatContainer) {
+            console.error('❌ chatContainer 不存在，無法添加用戶訊息');
+            return;
+        }
+
+        try {
+            this.chatContainer.appendChild(messageDiv);
+            this.scrollToBottom();
+        } catch (error) {
+            console.error('❌ 添加用戶訊息時發生錯誤:', error);
+        }
     }
 
     // Case D: 純串流模式，過濾英文思考內容，只顯示中文回答
@@ -2276,10 +2291,21 @@ class StreamingChatApp {
                 </div>
             </div>
         `;
-        
-        this.chatContainer.appendChild(responseDiv);
-        this.scrollToBottom();
-        return responseDiv;
+
+        // 檢查 chatContainer 是否存在
+        if (!this.chatContainer) {
+            console.error('❌ chatContainer 不存在，無法創建響應容器');
+            return null;
+        }
+
+        try {
+            this.chatContainer.appendChild(responseDiv);
+            this.scrollToBottom();
+            return responseDiv;
+        } catch (error) {
+            console.error('❌ 創建響應容器時發生錯誤:', error);
+            return null;
+        }
     }
 
     createThinkingContainer(responseDiv) {
@@ -3720,9 +3746,19 @@ class StreamingChatApp {
                 <div class="error-text">${this.escapeHtml(message)}</div>
             </div>
         `;
-        
-        this.chatContainer.appendChild(messageDiv);
-        this.scrollToBottom();
+
+        // 檢查 chatContainer 是否存在
+        if (!this.chatContainer) {
+            console.error('❌ chatContainer 不存在，無法添加錯誤訊息');
+            return;
+        }
+
+        try {
+            this.chatContainer.appendChild(messageDiv);
+            this.scrollToBottom();
+        } catch (error) {
+            console.error('❌ 添加錯誤訊息時發生錯誤:', error);
+        }
     }
 
     scrollToBottom() {
