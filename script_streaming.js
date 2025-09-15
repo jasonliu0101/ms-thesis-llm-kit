@@ -117,8 +117,17 @@ class StreamingChatApp {
         // 第二位：2表示為版本標識
         const digit2 = '2';
 
-        // 第三位：判斷是否開啟思考流程
-        const digit3 = (this.showThinkingCheckbox && this.showThinkingCheckbox.checked && data.thinking) ? '1' : '0';
+        // 第三位：根據 Case 類型強制設定
+        const currentPath = window.location.pathname;
+        let digit3;
+        if (currentPath.includes('case-c.html') || currentPath.includes('case-e.html')) {
+            digit3 = '1'; // Case C 和 Case E 強制為 1
+        } else if (currentPath.includes('case-d.html') || currentPath.includes('case-f.html')) {
+            digit3 = '0'; // Case D 和 Case F 強制為 0
+        } else {
+            // 其他情況保持原有邏輯
+            digit3 = (this.showThinkingCheckbox && this.showThinkingCheckbox.checked && data.thinking) ? '1' : '0';
+        }
 
         // 第四位：5到9隨機
         const digit4 = (Math.floor(Math.random() * 5) + 5).toString();
