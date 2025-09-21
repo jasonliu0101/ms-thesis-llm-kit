@@ -2477,8 +2477,8 @@ class StreamingChatApp {
                 <div class="survey-return-notice">
                     <i class="fas fa-external-link-alt"></i>
                     <span>點擊以下連結，即可返回問卷繼續填答：</span>
-                    <a href="https://www.surveycake.com/s/XYOg0" target="_blank" class="survey-link">
-                        https://www.surveycake.com/s/XYOg0
+                    <a href="https://www.surveycake.com/s/oN0zO" target="_blank" class="survey-link">
+                        https://www.surveycake.com/s/oN0zO
                     </a>
                     <div class="survey-note">
                         如果遇到問卷網頁跳轉回歡迎頁面，請點擊「開始後繼續填答即可
@@ -2562,8 +2562,8 @@ class StreamingChatApp {
                 <div class="survey-return-notice">
                     <i class="fas fa-external-link-alt"></i>
                     <span>點擊以下連結，即可返回問卷繼續填答：</span>
-                    <a href="https://www.surveycake.com/s/XYOg0" target="_blank" class="survey-link">
-                        https://www.surveycake.com/s/XYOg0
+                    <a href="https://www.surveycake.com/s/oN0zO" target="_blank" class="survey-link">
+                        https://www.surveycake.com/s/oN0zO
                     </a>
                     <div class="survey-note">
                         如果遇到問卷網頁跳轉回歡迎頁面，請點擊「開始」後繼續填答即可
@@ -2802,8 +2802,8 @@ class StreamingChatApp {
             <div class="survey-return-notice">
                 <i class="fas fa-external-link-alt"></i>
                 <span>點擊以下連結，即可返回問卷繼續填答：</span>
-                <a href="https://www.surveycake.com/s/XYOg0" target="_blank" class="survey-link">
-                    https://www.surveycake.com/s/XYOg0
+                <a href="https://www.surveycake.com/s/oN0zO" target="_blank" class="survey-link">
+                    https://www.surveycake.com/s/oN0zO
                 </a>
                 <div class="survey-note">
                     如果遇到問卷網頁跳轉回歡迎頁面，請點擊「開始」後繼續填答即可
