@@ -1093,24 +1093,28 @@ class ChatApp {
         console.log('� 清理參考資料列表...');
         const beforeRefClean = answerText.length;
         
-        // 核心清理邏輯：直接截斷「參考資料：」字樣及其後的所有內容
-        answerText = answerText.replace(/參考資料[：:][\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/引用資料[：:][\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/引用來源[：:][\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/參考來源[：:][\s\S]*$/m, '').trim();
+        // 核心清理邏輯：直接截斷「參考資料」字樣及其後的所有內容
+        answerText = answerText.replace(/參考資料[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/引用資料[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/引用來源[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/參考來源[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/資料來源[\s\S]*$/m, '').trim();
         
         // 額外清理各種可能的格式變體，確保徹底移除
-        answerText = answerText.replace(/---\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/---\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/---\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/---\s*\n\s*\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/---\s*\n\s*\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/---\s*\n\s*\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/---\s*\n\s*\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/\*\*參考資料[：:]\*\*[\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/\*\*引用來源[：:]\*\*[\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/\*\*參考來源[：:]\*\*[\s\S]*$/m, '').trim();
-        answerText = answerText.replace(/\*\*引用資料[：:]\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\*\*參考資料\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\*\*引用來源\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\*\*參考來源\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\*\*資料來源\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\n\s*\*\*參考資料\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\n\s*\*\*引用來源\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\n\s*\*\*參考來源\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\n\s*\*\*引用資料\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/---\s*\n\s*\*\*資料來源\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/\*\*參考資料\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/\*\*引用來源\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/\*\*參考來源\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/\*\*引用資料\*\*[\s\S]*$/m, '').trim();
+        answerText = answerText.replace(/\*\*資料來源\*\*[\s\S]*$/m, '').trim();
         
         if (beforeRefClean !== answerText.length) {
             console.log(`✅ 移除參考資料列表: 清理前 ${beforeRefClean} 字元，清理後 ${answerText.length} 字元`);
